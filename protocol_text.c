@@ -25,6 +25,7 @@
 #include <string.h>
 #include <json.h>
 
+extern int serToMQTT_pub(const char *message );
 
 static int local_stx = 'S';
 static int local_etx = '\n';
@@ -79,7 +80,8 @@ json_object_object_add(jobj,"milliSecondSinceStart",json_object_new_int(millisec
 json_object_object_add(jobj,"rawData",json_object_new_string(packet));
 
 // fprintf(stderr,"# %s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
-fprintf(stdout,"%s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));	fflush(stdout);
+// fprintf(stdout,"%s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));	fflush(stdout);
+(void) serToMQTT_pub(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
 json_object_put(jobj);
 }
 

@@ -23,7 +23,14 @@
 #include <unistd.h>
 #include <string.h>
 #include <json.h>
+#include <mosquitto.h>
 
+static int mqtt_port=1883;
+static char mqtt_host[256];
+static char mqtt_topic[256];
+static struct mosquitto *mosq;
+
+static void _mosquitto_shutdown(void);
 
 
 
@@ -45,7 +52,9 @@ uint64_t microtime() {
 	return ((uint64_t)time.tv_sec * 1000000) + time.tv_usec;
 }
 
-
+void connect_callback(struct mosquitto *mosq, void *obj, int result) {
+	printf("# connect_callback, rc=%d\n", result);
+}
 
 static void signal_handler(int signum) {
 
@@ -53,10 +62,12 @@ static void signal_handler(int signum) {
 	if ( SIGALRM == signum ) {
 		fprintf(stderr,"\n# Timeout while waiting for NMEA data.\n");
 		fprintf(stderr,"# Terminating.\n");
+		_mosquitto_shutdown();
 		exit(100);
 	} else if ( SIGPIPE == signum ) {
 		fprintf(stderr,"\n# Broken pipe.\n");
 		fprintf(stderr,"# Terminating.\n");
+		_mosquitto_shutdown();
 		exit(101);
 	} else if ( SIGUSR1 == signum ) {
 		/* clear signal */
@@ -69,6 +80,7 @@ static void signal_handler(int signum) {
 	} else {
 		fprintf(stderr,"\n# Caught unexpected signal %d.\n",signum);
 		fprintf(stderr,"# Terminating.\n");
+		_mosquitto_shutdown();
 		exit(102);
 	}
 
@@ -226,6 +238,85 @@ if ( 0 == p->label )
 	
 *modep = p;
 }
+static struct mosquitto *_mosquitto_startup(void) {
+	char clientid[24];
+	int rc = 0;
+
+
+	fprintf(stderr,"# mqtt-send-example start-up\n");
+
+
+	fprintf(stderr,"# initializing mosquitto MQTT library\n");
+	mosquitto_lib_init();
+
+	memset(clientid, 0, 24);
+	snprintf(clientid, 23, "mqtt-send-example_%d", getpid());
+	mosq = mosquitto_new(clientid, true, 0);
+
+	if (mosq) {
+		mosquitto_connect_callback_set(mosq, connect_callback);
+//		mosquitto_message_callback_set(mosq, message_callback);
+
+		fprintf(stderr,"# connecting to MQTT server %s:%d\n",mqtt_host,mqtt_port);
+		rc = mosquitto_connect(mosq, mqtt_host, mqtt_port, 60);
+		// if ( 0 != rc )	what do I do?
+
+		/* start mosquitto network handling loop */
+		mosquitto_loop_start(mosq);
+		}
+
+return	mosq;
+}
+
+static void _mosquitto_shutdown(void) {
+
+if ( mosq ) {
+	
+	/* disconnect mosquitto so we can be done */
+	mosquitto_disconnect(mosq);
+	/* stop mosquitto network handling loop */
+	mosquitto_loop_stop(mosq,0);
+
+
+	mosquitto_destroy(mosq);
+	}
+
+fprintf(stderr,"# mosquitto_lib_cleanup()\n");
+mosquitto_lib_cleanup();
+}
+int serToMQTT_pub(const char *message ) {
+	int rc = 0;
+
+	static int messageID;
+	/* instance, message ID pointer, topic, data length, data, qos, retain */
+	rc = mosquitto_publish(mosq, &messageID, mqtt_topic, strlen(message), message, 0, 0); 
+
+	fprintf(stderr,"# mosquitto_publish provided messageID=%d and return code=%d\n",messageID,rc);
+
+	/* check return status of mosquitto_publish */ 
+	/* this really just checks if mosquitto library accepted the message. Not that it was actually send on the network */
+	if ( MOSQ_ERR_SUCCESS == rc ) {
+		/* successful send */
+	} else if ( MOSQ_ERR_INVAL == rc ) {
+		fprintf(stderr,"# mosquitto error invalid parameters\n");
+	} else if ( MOSQ_ERR_NOMEM == rc ) {
+		fprintf(stderr,"# mosquitto error out of memory\n");
+	} else if ( MOSQ_ERR_NO_CONN == rc ) {
+		fprintf(stderr,"# mosquitto error no connection\n");
+	} else if ( MOSQ_ERR_PROTOCOL == rc ) {
+		fprintf(stderr,"# mosquitto error protocol\n");
+	} else if ( MOSQ_ERR_PAYLOAD_SIZE == rc ) {
+		fprintf(stderr,"# mosquitto error payload too large\n");
+	} else if ( MOSQ_ERR_MALFORMED_UTF8 == rc ) {
+		fprintf(stderr,"# mosquitto error topic is not valid UTF-8\n");
+	} else {
+		fprintf(stderr,"# mosquitto unknown error = %d\n",rc);
+	}
+
+
+return	rc;
+}
+
 int main(int argc, char **argv) {
 	char portname[128] = "/dev/ttyAMA0";
 	int serialfd;
@@ -235,8 +326,17 @@ int main(int argc, char **argv) {
 	char *_M = 0;
 
 	/* command line arguments */
-	while ((n = getopt (argc, argv, "a:b:hi:p:s:vt:m:M:")) != -1) {
+	while ((n = getopt (argc, argv, "a:b:hi:s:vt:m:M:H:P:T:")) != -1) {
 		switch (n) {
+			case 'T':	
+				strncpy(mqtt_topic,optarg,sizeof(mqtt_topic));
+				break;
+			case 'H':	
+				strncpy(mqtt_host,optarg,sizeof(mqtt_host));
+				break;
+			case 'P':
+				mqtt_port = atoi(optarg);
+				break;
 			case 'b':
 				_do_speed(&_baud,optarg);
 				break;
@@ -288,12 +388,12 @@ int main(int argc, char **argv) {
 				exit(0);
 		}
 	}
-	if ( 0 == _mode )
-		{
-		fputs("# -m is missing and is required.\n",stderr);
-		exit(1);
-		}
+	if ( 0 == _mode ) { fputs("# -m is missing and is required.\n",stderr); exit(1); }
+	if ( ' ' >= mqtt_host[0] ) { fputs("# <-H mqtt_host>	\n",stderr); exit(1); } else fprintf(stderr,"# mqtt_host=%s\n",mqtt_host);
+	if ( ' ' >= mqtt_topic[0] ) { fputs("# <-H mqtt_topic>	\n",stderr); exit(1); } else fprintf(stderr,"# mqtt_topic=%s\n",mqtt_topic);
 
+if ( 0 == _mosquitto_startup() )
+	return	1;
 
 
 	/* install signal handler */
@@ -317,6 +417,8 @@ int main(int argc, char **argv) {
 
 
 	(*_mode->packet_processor_func)(serialfd,_M );	/* call the mode specified on the cmd_line with its special stuff */
+
+	_mosquitto_shutdown();
 
 	exit(0);
 }
