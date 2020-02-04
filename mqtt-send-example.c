@@ -1,4 +1,11 @@
-/* compile with: gcc mqtt-send-example.c -o mqtt-send-example -lmosquitto */
+/* example MQTT sending program
+ *
+ * compile with: gcc mqtt-send-example.c -o mqtt-send-example -lmosquitto 
+ *
+ *
+ * test with: mosquitto_sub -d -t test
+ * */
+
 #define _GNU_SOURCE
 
 #include <signal.h>
@@ -14,8 +21,6 @@
 #define mqtt_host "localhost"
 #define mqtt_port 1883
 
-
-static int run = 1;
 
 
 void connect_callback(struct mosquitto *mosq, void *obj, int result) {
@@ -65,6 +70,7 @@ void message_callback(struct mosquitto *mosq, void *obj, const struct mosquitto_
 #endif
 
 int main(int argc, char **argv) {
+	int i;
 	uint8_t reconnect = true;
 	char clientid[24];
 	struct mosquitto *mosq;
@@ -90,37 +96,48 @@ int main(int argc, char **argv) {
 		fprintf(stderr,"# connecting to MQTT server %s:%d\n",mqtt_host,mqtt_port);
 		rc = mosquitto_connect(mosq, mqtt_host, mqtt_port, 60);
 
+		/* start mosquitto network handling loop */
+		mosquitto_loop_start(mosq);
 
-		fprintf(stderr,"# sending test message\n");
-		sprintf(testMessage,"hello world!");
 
-		/* instance, message ID pointer, topic, data length, data, qos, retain */
-		rc = mosquitto_publish(mosq, &messageID, "test", strlen(testMessage), testMessage, 0, 0); 
+		for ( i=0 ; i<10 ; i++ ) {
+			sprintf(testMessage,"test message %d",i);
+			fprintf(stderr,"# sending message '%s'\n",testMessage);
 
-		fprintf(stderr,"# mosquitto_publish provided messageID=%d and return code=%d\n",messageID,rc);
+			/* instance, message ID pointer, topic, data length, data, qos, retain */
+			rc = mosquitto_publish(mosq, &messageID, "test", strlen(testMessage), testMessage, 0, 0); 
 
-		/* check return status of mosquitto_publish */ 
-		if ( MOSQ_ERR_SUCCESS == rc ) {
-			/* successful send */
-		} else if ( MOSQ_ERR_INVAL == rc ) {
-			fprintf(stderr,"# mosquitto error invalid parameters\n");
-		} else if ( MOSQ_ERR_NOMEM == rc ) {
-			fprintf(stderr,"# mosquitto error out of memory\n");
-		} else if ( MOSQ_ERR_NO_CONN == rc ) {
-			fprintf(stderr,"# mosquitto error no connection\n");
-		} else if ( MOSQ_ERR_PROTOCOL == rc ) {
-			fprintf(stderr,"# mosquitto error protocol\n");
-		} else if ( MOSQ_ERR_PAYLOAD_SIZE == rc ) {
-			fprintf(stderr,"# mosquitto error payload too large\n");
-		} else if ( MOSQ_ERR_MALFORMED_UTF8 == rc ) {
-			fprintf(stderr,"# mosquitto error topic is not valid UTF-8\n");
-		} else {
-			fprintf(stderr,"# mosquitto unknown error = %d\n",rc);
+			fprintf(stderr,"# mosquitto_publish provided messageID=%d and return code=%d\n",messageID,rc);
+
+			/* check return status of mosquitto_publish */ 
+			/* this really just checks if mosquitto library accepted the message. Not that it was actually send on the network */
+			if ( MOSQ_ERR_SUCCESS == rc ) {
+				/* successful send */
+			} else if ( MOSQ_ERR_INVAL == rc ) {
+				fprintf(stderr,"# mosquitto error invalid parameters\n");
+			} else if ( MOSQ_ERR_NOMEM == rc ) {
+				fprintf(stderr,"# mosquitto error out of memory\n");
+			} else if ( MOSQ_ERR_NO_CONN == rc ) {
+				fprintf(stderr,"# mosquitto error no connection\n");
+			} else if ( MOSQ_ERR_PROTOCOL == rc ) {
+				fprintf(stderr,"# mosquitto error protocol\n");
+			} else if ( MOSQ_ERR_PAYLOAD_SIZE == rc ) {
+				fprintf(stderr,"# mosquitto error payload too large\n");
+			} else if ( MOSQ_ERR_MALFORMED_UTF8 == rc ) {
+				fprintf(stderr,"# mosquitto error topic is not valid UTF-8\n");
+			} else {
+				fprintf(stderr,"# mosquitto unknown error = %d\n",rc);
+			}
 		}
 
-
-		/* give async mosquitto_publish a chance to finish */
+		/* TODO: figure out that we have actually sent before hanging up */
 		sleep(1);
+
+
+		/* disconnect mosquitto so we can be done */
+		mosquitto_disconnect(mosq);
+		/* stop mosquitto network handling loop */
+		mosquitto_loop_stop(mosq,0);
 
 
 		mosquitto_destroy(mosq);
