@@ -130,8 +130,11 @@ int main(int argc, char **argv) {
 			}
 		}
 
-		/* TODO: figure out that we have actually sent before hanging up */
-		sleep(1);
+		/* wait for data to be written before being done */
+		while ( mosquitto_want_write(mosq) ) {
+			fprintf(stderr,"# mosquitto still wanting to write data. Sleeping 1000 microseconds.\n");
+			usleep(1000);
+		}
 
 
 		/* disconnect mosquitto so we can be done */
