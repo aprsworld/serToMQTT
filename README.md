@@ -61,13 +61,14 @@ switch|Required/Optional|argument|description
 
 ### NMEA0183
 
--M (options)
-arg| |description
+#### -M (options)
+
+arg|type |description
 ---|---|---
 stx|start of text|default='$'
 etx|end of text|default=newline
 
-### Example
+#### Example
 
 -M "stx=$ etx=^m"
 
