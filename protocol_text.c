@@ -59,11 +59,12 @@ struct_data_block data_block[DATA_BLOCK_N];
 
 
 
-static void text_packet_processor(char *packet, int length, uint64_t microtime_start, int millisec_since_start) {
+static int text_packet_processor(char *packet, int length, uint64_t microtime_start, int millisec_since_start) {
+	int rc = 0;
 
 	/* quick sanity check */
 	if ( length < 9 )
-		return;
+		return rc;
 
 	/* null terminate so we can use string functions going forwards */
 	packet[length]='\0';
@@ -81,8 +82,9 @@ json_object_object_add(jobj,"rawData",json_object_new_string(packet));
 
 // fprintf(stderr,"# %s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
 // fprintf(stdout,"%s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));	fflush(stdout);
-(void) serToMQTT_pub(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
+rc =  serToMQTT_pub(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
 json_object_put(jobj);
+return	rc;
 }
 
 
@@ -95,8 +97,9 @@ STATE_IN_PACKET,
 
 extern uint64_t microtime(); 
 
-static void serial_process(int serialfd) {
+static int serial_process(int serialfd) {
 	int i,n;
+	int	rc = 0;
 	uint64_t microtime_now;
 	int milliseconds_since_stx;
 	char buff[1];
@@ -109,7 +112,7 @@ static void serial_process(int serialfd) {
 
 	n = read (serialfd, buff, sizeof(buff));  // read next character if ready
 /*   stub stub stub 
-	if ( 0 < n ) write(1,buff,n);	return; */
+	if ( 0 < n ) write(1,buff,n);	return	rc; */
 	
 	microtime_now=microtime();
 
@@ -121,7 +124,7 @@ static void serial_process(int serialfd) {
 		if ( outputDebug ) {
 			printf("(read returned 0 bytes)\n");
 		}
-		return;
+		return	rc;
 	}
 
 	/* cancel pending alarm */
@@ -139,7 +142,7 @@ static void serial_process(int serialfd) {
 	*/
 
 	/* copy byte to packet */
-	for ( i=0 ; i<n ; i++ ) {
+	for ( i=0 ; 0 == rc && i<n ; i++ ) {
 		/* look for start character */
 		if ( STATE_LOOKING_FOR_STX == state && local_stx ==  buff[i] ) {
 			packet_pos=0;
@@ -165,7 +168,7 @@ static void serial_process(int serialfd) {
 				state=STATE_LOOKING_FOR_STX;
 
 				/* process packet */
-				text_packet_processor(packet,packet_pos,microtime_start,milliseconds_since_stx);
+				rc = text_packet_processor(packet,packet_pos,microtime_start,milliseconds_since_stx);
 			}
 
 			if ( packet_pos < sizeof(packet)-1 ) {
@@ -181,6 +184,7 @@ static void serial_process(int serialfd) {
 
 	}
 
+return	rc;
 }
 static void _do_command( char * s)
 {
@@ -217,6 +221,7 @@ while ( (p = strsep(&q," \t\n\r")) && ('\0' != p[0]) )	// this will find zero or
 }
 
 void text_engine(int serialfd,char *special_handling ) {
+	int rc = 0;
 	int i;
 
 	_overRide(special_handling);
@@ -233,7 +238,7 @@ void text_engine(int serialfd,char *special_handling ) {
 	//alarm(alarmSeconds);
 
 
-	for ( ; ; ) {
+	for ( ;  0 == rc ; ) {
 		/* Block until input arrives on one or more active sockets. */
 		read_fd_set = active_fd_set;
 
@@ -248,11 +253,11 @@ void text_engine(int serialfd,char *special_handling ) {
 		} 
 
 		/* Service all the sockets with input pending. */
-		for ( i=0 ; i < FD_SETSIZE ; ++i ) {
+		for ( i=0 ; 0 == rc && i < FD_SETSIZE ; ++i ) {
 			if ( FD_ISSET(i, &read_fd_set) ) {
 				if ( serialfd  == i ) {
 					/* serial port has something to do */
-					serial_process(serialfd);
+					rc = serial_process(serialfd);
 				}
 			}
 		}

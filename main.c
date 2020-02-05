@@ -291,7 +291,7 @@ int serToMQTT_pub(const char *message ) {
 	/* instance, message ID pointer, topic, data length, data, qos, retain */
 	rc = mosquitto_publish(mosq, &messageID, mqtt_topic, strlen(message), message, 0, 0); 
 
-	fprintf(stderr,"# mosquitto_publish provided messageID=%d and return code=%d\n",messageID,rc);
+	if (0 != outputDebug) fprintf(stderr,"# mosquitto_publish provided messageID=%d and return code=%d\n",messageID,rc);
 
 	/* check return status of mosquitto_publish */ 
 	/* this really just checks if mosquitto library accepted the message. Not that it was actually send on the network */
@@ -390,7 +390,7 @@ int main(int argc, char **argv) {
 	}
 	if ( 0 == _mode ) { fputs("# -m is missing and is required.\n",stderr); exit(1); }
 	if ( ' ' >= mqtt_host[0] ) { fputs("# <-H mqtt_host>	\n",stderr); exit(1); } else fprintf(stderr,"# mqtt_host=%s\n",mqtt_host);
-	if ( ' ' >= mqtt_topic[0] ) { fputs("# <-H mqtt_topic>	\n",stderr); exit(1); } else fprintf(stderr,"# mqtt_topic=%s\n",mqtt_topic);
+	if ( ' ' >= mqtt_topic[0] ) { fputs("# <-T mqtt_topic>	\n",stderr); exit(1); } else fprintf(stderr,"# mqtt_topic=%s\n",mqtt_topic);
 
 if ( 0 == _mosquitto_startup() )
 	return	1;

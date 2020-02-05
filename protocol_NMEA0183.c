@@ -1,4 +1,3 @@
-
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <errno.h>
@@ -58,13 +57,14 @@ struct_data_block data_block[DATA_BLOCK_N];
 
 
 
-void nmea_packet_processor(char *packet, int length, uint64_t microtime_start, int millisec_since_start) {
+int nmea_packet_processor(char *packet, int length, uint64_t microtime_start, int millisec_since_start) {
+	int rc = 0;
 	int i;
 	int lChecksum,rChecksum;
 
 	/* quick sanity check */
 	if ( length < 9 )
-		return;
+		return rc;
 
 	/* null terminate so we can use string functions going forwards */
 	packet[length]='\0';
@@ -82,7 +82,7 @@ void nmea_packet_processor(char *packet, int length, uint64_t microtime_start, i
 		if ( outputDebug ) {
 			printf("(error scanning remote checksum hex)\n");
 		}
-		return;
+		return rc;
 	}
 
 	/* compare local and remote checksums */
@@ -90,7 +90,7 @@ void nmea_packet_processor(char *packet, int length, uint64_t microtime_start, i
 		if ( outputDebug ) {
 			printf("(remote and local checksum do not match!)\n");
 		}
-		return;
+		return rc;
 	}
 
 char	buffer[32] = {};
@@ -103,9 +103,10 @@ json_object_object_add(jobj,"milliSecondSinceStart",json_object_new_int(millisec
 json_object_object_add(jobj,"rawData",json_object_new_string(packet));
 
 // fprintf(stderr,"# %s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
-(void) serToMQTT_pub(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
+rc = serToMQTT_pub(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
 json_object_put(jobj);
 
+return	rc;
 }
 
 enum states {
@@ -116,7 +117,8 @@ STATE_IN_PACKET,
 
 extern uint64_t microtime(); 
 
-static void _serial_process(int serialfd) {
+static int  _serial_process(int serialfd) {
+	int rc = 0;
 	int i,n;
 	uint64_t microtime_now;
 	int milliseconds_since_stx;
@@ -137,9 +139,9 @@ static void _serial_process(int serialfd) {
 	/* read timeout */
 	if ( 0 == n ) {
 		if ( outputDebug ) {
-			printf("(read returned 0 bytes)\n");
+			fprintf(stderr,"# (read returned 0 bytes)\n");
 		}
-		return;
+		return rc;
 	}
 
 	/* cancel pending alarm */
@@ -157,7 +159,7 @@ static void _serial_process(int serialfd) {
 	*/
 
 	/* copy byte to packet */
-	for ( i=0 ; i<n ; i++ ) {
+	for ( i=0 ; 0 == rc && i<n ; i++ ) {
 		/* look for start character */
 		if ( STATE_LOOKING_FOR_STX == state && '$' ==  buff[i] ) {
 			packet_pos=0;
@@ -182,7 +184,7 @@ static void _serial_process(int serialfd) {
 				state=STATE_LOOKING_FOR_STX;
 
 				/* process packet */
-				nmea_packet_processor(packet,packet_pos,microtime_start,milliseconds_since_stx);
+				rc = nmea_packet_processor(packet,packet_pos,microtime_start,milliseconds_since_stx);
 			}
 
 			if ( packet_pos < sizeof(packet)-1 ) {
@@ -198,6 +200,7 @@ static void _serial_process(int serialfd) {
 
 	}
 
+return	rc;
 }
 static void _do_command( char * s)
 {
@@ -235,6 +238,7 @@ while ( (p = strsep(&q," \t\n\r")) && ('\0' != p[0]) )	// this will find zero or
 
 void nmea0183_engine(int serialfd,char *special_handling ) {
 	int i;
+	int rc = 0;
 
 	_overRide(special_handling);
 
@@ -250,7 +254,7 @@ void nmea0183_engine(int serialfd,char *special_handling ) {
 	//alarm(alarmSeconds);
 
 
-	for ( ; ; ) {
+	for ( ; 0 == rc ; ) {
 		/* Block until input arrives on one or more active sockets. */
 		read_fd_set = active_fd_set;
 
@@ -265,11 +269,11 @@ void nmea0183_engine(int serialfd,char *special_handling ) {
 		} 
 
 		/* Service all the sockets with input pending. */
-		for ( i=0 ; i < FD_SETSIZE ; ++i ) {
+		for ( i=0 ; 0 == rc && i < FD_SETSIZE ; ++i ) {
 			if ( FD_ISSET(i, &read_fd_set) ) {
 				if ( serialfd  == i ) {
 					/* serial port has something to do */
-					_serial_process(serialfd);
+					rc = _serial_process(serialfd);
 				}
 			}
 		}
