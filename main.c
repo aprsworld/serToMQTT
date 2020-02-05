@@ -376,6 +376,10 @@ int main(int argc, char **argv) {
 				fprintf(stderr,"# verbose (debugging) output to stderr enabled\n");
 				break;
 			case 'h':
+				fprintf(stdout,"# -M mode or protocol special handling\n");
+				fprintf(stdout,"# -T mqtt topic\n");
+				fprintf(stdout,"# -H mqtt host\n");
+				fprintf(stdout,"# -H mqtt port\n");
 				fprintf(stdout,"# -a seconds\tTerminate after seconds without data\n");
 				fprintf(stdout,"# -t milliseconds\tTimeout packet after milliseconds since start\n");
 				fprintf(stdout,"# -s seconds\tstartup delay\n");
