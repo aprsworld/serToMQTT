@@ -25,6 +25,9 @@ publishes to mqtt on a topic
 
 `sudo apt-get install libssl1.0-dev`
 
+## Build
+
+`make`
 
 ## Protocols
 
@@ -39,6 +42,8 @@ text|text that has a format stx payload ext
 
 ./serToMQTT -m text -i /dev/ttyUSB1 -b B115200 -H localhost -T whatever
 
+## Command line switches
+
 switch|Required/Optional|argument|description
 ---|---|---|---
 -T|REQUIRED|topic|mqtt topic
@@ -50,5 +55,20 @@ switch|Required/Optional|argument|description
 -P|OPTIONAL|number|default is 1883
 -M|OPTIONAL|single arg|See below
 -h|OPTIONAL|(none)|displays help and exits
+
+
+## Mode or protocol special handling
+
+### NMEA0183
+
+-M (options)
+arg| |description
+---|---|---
+stx|start of text|default='$'
+etx|end of text|default=newline
+
+### Example
+
+-M "stx=$ etx=^m"
 
 
