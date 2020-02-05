@@ -65,7 +65,7 @@ etx|end of text|default=newline
 -M "stx=$ etx=^m"
 
 Visually this looks correct but special characters must be escaped to prevent the shell from
-mishandling.   In bash $ should be enterd stx='$'   and newline should be entered as control-M <enter>.
+mishandling.   In bash $ should be enterd stx=`'$'`   and newline should be entered as `control-M <enter>`.
 
 
 
@@ -83,4 +83,4 @@ etx|end of text|default=newline
 -M "stx=S etx=^m"
 
 Visually this looks correct but special characters must be escaped to prevent the shell from
-mishandling.   In bash $ should be enterd stx='$'   and newline should be entered as control-M <enter>.
+mishandling.   In bash $ should be enterd stx=`'$'`   and newline should be entered as `control-M <enter>`.
