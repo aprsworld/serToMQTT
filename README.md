@@ -27,6 +27,7 @@ publishes to mqtt on a topic
 
 
 ##Protocols
+
 protocol id|description
 NMEA0183| NMEA0183 protocol
 text|text that has a format stx payload ext
