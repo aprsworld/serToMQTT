@@ -73,3 +73,18 @@ etx|end of text|default=newline
 -M "stx=$ etx=^m"
 
 
+
+### text
+
+#### -M (options)
+
+arg|type |description
+---|---|---
+stx|start of text|default='S'
+etx|end of text|default=newline
+
+#### Example
+
+-M "stx=S etx=^m"
+
+
