@@ -185,6 +185,8 @@ static MODES modes[] = {
 
 static void _do_speed( int *speed,char *s )
 {
+char	buffer[32];
+if ( 'B' != s[0] )	{	snprintf(buffer,sizeof(buffer),"B%s",s);	s = buffer;	}
 if ( 0 == strcmp(s,"B0"))	*speed = B0;
 else if ( 0 == strcmp(s,"B50"))	*speed = B50;
 else if ( 0 == strcmp(s,"B75"))	*speed = B75;
@@ -207,7 +209,7 @@ else if ( 0 == strcmp(s,"B230400"))	*speed = B230400;
 else 
 	{
 	fprintf(stderr,"# BAD -b %s\n"
-			"# try -b B115200\n",s);
+			"# try -b 115200\n",s);
 	exit(1);
 	}
 }
@@ -376,13 +378,13 @@ int main(int argc, char **argv) {
 				fprintf(stderr,"# verbose (debugging) output to stderr enabled\n");
 				break;
 			case 'h':
-				fprintf(stdout,"# -M mode or protocol special handling\n");
-				fprintf(stdout,"# -T mqtt topic\n");
-				fprintf(stdout,"# -H mqtt host\n");
-				fprintf(stdout,"# -H mqtt port\n");
-				fprintf(stdout,"# -a seconds\tTerminate after seconds without data\n");
-				fprintf(stdout,"# -t milliseconds\tTimeout packet after milliseconds since start\n");
-				fprintf(stdout,"# -s seconds\tstartup delay\n");
+				fprintf(stdout,"# -M\t\tmode or protocol special handling\n");
+				fprintf(stdout,"# -T\t\tmqtt topic\n");
+				fprintf(stdout,"# -H\t\tmqtt host\n");
+				fprintf(stdout,"# -H\t\tmqtt port\n");
+				fprintf(stdout,"# -a\t\tseconds\tTerminate after seconds without data\n");
+				fprintf(stdout,"# -t\t\tmilliseconds\tTimeout packet after milliseconds since start\n");
+				fprintf(stdout,"# -s\t\tseconds\tstartup delay\n");
 				fprintf(stdout,"# -v\t\tOutput verbose / debugging to stderr\n");
 				fprintf(stdout,"# -i\t\tserial device to use (default: /dev/ttyAMA0)\n");
 				fprintf(stdout,"# -b\t\tserial baud to use (default: B4800)\n");
