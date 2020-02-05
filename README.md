@@ -7,19 +7,11 @@ publishes to mqtt on a topic
 ## Installation
 
 
-`sudo apt install gcc`
-
-`sudo apt stall mosquitto-dev`
-
 `sudo apt-get install mosquitto-dev`
-
-`sudo apt install pkg-config`
 
 `sudo apt-get install libmodbus-dev`
 
 `sudo apt-get install libjson-c-dev`
-
-`sudo apt install git`
 
 `sudo apt-get install libmosquittopp-dev`
 
@@ -72,6 +64,9 @@ etx|end of text|default=newline
 
 -M "stx=$ etx=^m"
 
+Visually this looks correct but special characters must be escaped to prevent the shell from
+mishandling.   In bash $ should be enterd stx='$'   and newline should be entered as control-M <enter>.
+
 
 
 ### text
@@ -87,4 +82,5 @@ etx|end of text|default=newline
 
 -M "stx=S etx=^m"
 
-
+Visually this looks correct but special characters must be escaped to prevent the shell from
+mishandling.   In bash $ should be enterd stx='$'   and newline should be entered as control-M <enter>.
