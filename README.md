@@ -7,16 +7,24 @@ publishes to mqtt on a topic
 ## Installation
 
 
-`sudo  apt install gcc`
-`stall mosquitto-dev`
+`sudo apt install gcc`
+
+`sudo apt stall mosquitto-dev`
+
 `sudo apt-get install mosquitto-dev`
+
 `sudo apt install pkg-config`
+
 `sudo apt-get install libmodbus-dev`
+
 `sudo apt-get install libjson-c-dev`
-`sudo apt-get install xclip`
+
 `sudo apt install git`
+
 `sudo apt-get install libmosquittopp-dev`
+
 `sudo apt-get install libssl1.0-dev`
+
 
 ##Protocols
 protocol id|description
