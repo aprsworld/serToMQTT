@@ -381,13 +381,13 @@ int main(int argc, char **argv) {
 				fprintf(stdout,"# -M\t\tmode or protocol special handling\n");
 				fprintf(stdout,"# -T\t\tmqtt topic\n");
 				fprintf(stdout,"# -H\t\tmqtt host\n");
-				fprintf(stdout,"# -H\t\tmqtt port\n");
+				fprintf(stdout,"# -p\t\tmqtt port\n");
 				fprintf(stdout,"# -a\t\tseconds\tTerminate after seconds without data\n");
 				fprintf(stdout,"# -t\t\tmilliseconds\tTimeout packet after milliseconds since start\n");
 				fprintf(stdout,"# -s\t\tseconds\tstartup delay\n");
 				fprintf(stdout,"# -v\t\tOutput verbose / debugging to stderr\n");
 				fprintf(stdout,"# -i\t\tserial device to use (default: /dev/ttyAMA0)\n");
-				fprintf(stdout,"# -b\t\tserial baud to use (default: B4800)\n");
+				fprintf(stdout,"# -b\t\tserial baud to use (default: 4800)\n");
 				fprintf(stdout,"#\n");
 				fprintf(stdout,"# -h\t\tThis help message then exit\n");
 				fprintf(stdout,"#\n");

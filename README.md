@@ -42,12 +42,14 @@ switch|Required/Optional|argument|description
 -m|REQUIRED|see above|protocol id 
 -H|REQUIRED|qualified host|mqtt host operating mqtt server
 -i|REQUIRED|full path to device|input serial port
+-a|OPTIONAL|seconds Terminate after seconds without data
+-t|OPTIONAL|milliseconds    Timeout packet after milliseconds since start
+-s|OPTIONAL|seconds startup delay
 -b|OPTIONAL|number|baud rate of serial port default is 4800
 -v|OPTIONAL|(none)|sets verbose mode
 -P|OPTIONAL|number|default is 1883
 -M|OPTIONAL|single arg|See below
 -h|OPTIONAL|(none)|displays help and exits
-
 
 ## Mode or protocol special handling
 
@@ -98,7 +100,7 @@ Command line in the lab looks like:
 
 ` ./serToMQTT -T /toStation/A2744 -m text -H localhost -i /dev/ttyUSB0 -b 57600 -M "stx=X etx=0x0d" -t 1024`
 
-The critcal different is specifying the stx and etx using the -M option and specifying the packet time out.   The time out by 
+The critcal difference is specifying the stx and etx using the -M option and specifying the packet time out.   The time out by 
 default is 500 mSeconds.   This device seems to be sending packets once per second so the need for 1024 mSeconds.   This
 was determined experimetally.
 
