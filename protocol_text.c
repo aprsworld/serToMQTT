@@ -108,7 +108,7 @@ static int serial_process(int serialfd) {
 	static char packet[128];
 	static int packet_pos=0;
 	static uint64_t microtime_start=0;
-	static int state=STATE_LOOKING_FOR_STX;
+	static enum states state=STATE_LOOKING_FOR_STX;
 
 	n = read (serialfd, buff, sizeof(buff));  // read next character if ready
 /*   stub stub stub 
@@ -135,7 +135,7 @@ static int serial_process(int serialfd) {
 	milliseconds_since_stx=(int) ((microtime_now-microtime_start)/1000.0);
 
 
-	/* NMEA packets:
+	/* packets:
 		start with '$'
 		end with '\r' or '\n'
 		get aborted on timeout
@@ -158,12 +158,11 @@ static int serial_process(int serialfd) {
 				state=STATE_LOOKING_FOR_STX;
 
 				if ( outputDebug ) {
-					printf("(timeout while reading NMEA sentence)\n");
+					printf("(timeout while reading text sentence)\n");
 				}
 				continue;
 			}
 	
-//			if ( '\r' == buff[i] || '\n' == buff[i] ) {
 			if ( local_etx == buff[i] ) {
 				state=STATE_LOOKING_FOR_STX;
 
@@ -186,6 +185,16 @@ static int serial_process(int serialfd) {
 
 return	rc;
 }
+static void  _do_hex(int *iP, char *s )
+{
+
+int i,j;
+
+j = sscanf(s,"%x",&i);
+
+
+if ( 1 == j )	*iP = i;
+}
 static void _do_command( char * s)
 {
 /* s contains one command of the type  $cmd=$parameter */
@@ -198,9 +207,17 @@ q= buffer;
 p = strsep(&q,"=");
 /* p is the command and q is the paramenter */
 if ( 0 == strcmp(p,"stx"))
+	{
 	local_stx = q[0];
+	if ( 0 == strncmp(q,"0x",2) || 0 == strncmp(q,"0X",2))
+		 _do_hex(&local_stx,q);
+	}
 else if ( 0 == strcmp(p,"etx"))
+	{
 	local_etx = q[0];
+	if ( 0 == strncmp(q,"0x",2) || 0 == strncmp(q,"0X",2))
+		 _do_hex(&local_etx,q);
+	}
 else
 	{
 	fprintf(stderr,"# -M option '%s' not supported.\n",s);

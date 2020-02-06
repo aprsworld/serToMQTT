@@ -9,8 +9,6 @@ publishes to mqtt on a topic
 
 `sudo apt-get install mosquitto-dev`
 
-`sudo apt-get install libmodbus-dev`
-
 `sudo apt-get install libjson-c-dev`
 
 `sudo apt-get install libmosquittopp-dev`
@@ -30,9 +28,11 @@ text|text that has a format stx payload ext
 
 ## Examples 
 
-./serToMQTT -T /toStation/A2744 -m nmea0183 -H localhost -i /dev/ttyUSB2 -b B4800
+./serToMQTT -T /toStation/A2744 -m nmea0183 -H localhost -i /dev/ttyUSB2 -b 4800
 
-./serToMQTT -m text -i /dev/ttyUSB1 -b B115200 -H localhost -T whatever
+./serToMQTT -m text -i /dev/ttyUSB1 -b 115200 -H localhost -T whatever
+
+ ./serToMQTT -T /toStation/A2744 -m text -H localhost -i /dev/ttyUSB0 -b 57600 -M "stx=X etx=0x0d" -t 1024
 
 ## Command line switches
 
@@ -80,7 +80,42 @@ etx|end of text|default=newline
 
 #### Example
 
--M "stx=S etx=^m"
+`-M "stx=S etx=^m"`
+
+       or
+
+`-M "stx=X etx=0x0d"`
 
 Visually this looks correct but special characters must be escaped to prevent the shell from
 mishandling.   In bash $ should be enterd stx=`'$'`   and newline should be entered as `control-M <enter>`.
+
+As an easier alternative you can specify both stx and etx in hexidecimal.   Where newline =0x0a   and cariage return = 0x0d
+
+
+## InterMet iMet-XQ2
+
+Command line in the lab looks like:
+
+` ./serToMQTT -T /toStation/A2744 -m text -H localhost -i /dev/ttyUSB0 -b 57600 -M "stx=X etx=0x0d" -t 1024`
+
+The critcal different is specifying the stx and etx using the -M option and specifying the packet time out.   The time out by 
+default is 500 mSeconds.   This device seems to be sending packets once per second so the need for 1024 mSeconds.   This
+was determined experimetally.
+
+## TriSonica Mini
+
+Command line in the lab looks like:
+
+`./serToMQTT -m text -i /dev/ttyUSB1 -b 115200 -H localhost -T /toStation/A2744`
+
+The defaults of stx='S' and etx=0x0a are used, and need not be specified.
+
+## NMEA0183 instruments
+
+Command line in the lab looks like:
+
+`./serToMQTT -T /toStation/A2744 -m nmea0183 -H localhost -i /dev/ttyUSB2 -b 4800`
+
+The defaults of stx='$' and etx=newline are used, and need not be specified.
+
+
