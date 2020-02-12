@@ -24,6 +24,7 @@
 #include <string.h>
 #include <json.h>
 
+extern   void set_blocking (int fd, int vmin, int vtime) ;
 extern int serToMQTT_pub(const char *message );
 
 static int local_stx = '$';
@@ -242,9 +243,11 @@ void nmea0183_engine(int serialfd,char *special_handling ) {
 
 	_overRide(special_handling);
 
+	set_blocking (serialfd, 1, 0);		// blocking wait for a character
 	/* server socket */
 	fd_set active_fd_set, read_fd_set;
 
+	FD_ZERO( &active_fd_set);
 
 
 	/* add serial fd to fd_set for select() */
@@ -268,15 +271,8 @@ void nmea0183_engine(int serialfd,char *special_handling ) {
 			exit(1);
 		} 
 
-		/* Service all the sockets with input pending. */
-		for ( i=0 ; 0 == rc && i < FD_SETSIZE ; ++i ) {
-			if ( FD_ISSET(i, &read_fd_set) ) {
-				if ( serialfd  == i ) {
-					/* serial port has something to do */
-					rc = _serial_process(serialfd);
-				}
-			}
-		}
+		if ( FD_ISSET(serialfd, &read_fd_set) ) 
+			rc = _serial_process(serialfd);
 	}
 
 }

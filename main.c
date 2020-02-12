@@ -125,7 +125,7 @@ static int set_interface_attribs (int fd, int speed, int parity) {
 	return 0;
 }
 
-static void set_blocking (int fd, int vmin, int vtime) {
+void set_blocking (int fd, int vmin, int vtime) {
 	struct termios tty;
 	memset (&tty, 0, sizeof tty);
 	if (tcgetattr (fd, &tty) != 0) {
