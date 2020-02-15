@@ -58,8 +58,14 @@ struct_data_block data_block[DATA_BLOCK_N];
 
 #include <sys/time.h>
 
+enum input_formats {
+NO_FORMAT,
+iMet_XQ2_FORMAT,
+};
 
+#include "iMet_XQ2.c"
 
+static enum input_formats this_format = NO_FORMAT;
 
 static int text_packet_processor(char *packet, int length, uint64_t microtime_start, int millisec_since_start) {
 	int rc = 0;
@@ -71,22 +77,35 @@ static int text_packet_processor(char *packet, int length, uint64_t microtime_st
 	/* null terminate so we can use string functions going forwards */
 	packet[length]='\0';
 
-// fprintf(stderr,"#  %s\n",packet);
 	
-char	buffer[32] = {};
-struct json_object *jobj;
+	char	buffer[32] = {};
+	struct json_object *jobj;
+	struct json_object *tmp = 0;
 
-jobj = json_object_new_object();
-snprintf(buffer,sizeof(buffer),"%lu",microtime_start);
-json_object_object_add(jobj,"epochMicroseconds",json_object_new_string(buffer));
-json_object_object_add(jobj,"milliSecondSinceStart",json_object_new_int(millisec_since_start));
-json_object_object_add(jobj,"rawData",json_object_new_string(packet));
+	jobj = json_object_new_object();
+	snprintf(buffer,sizeof(buffer),"%lu",microtime_start);
+	json_object_object_add(jobj,"epochMicroseconds",json_object_new_string(buffer));
+	json_object_object_add(jobj,"milliSecondSinceStart",json_object_new_int(millisec_since_start));
+	json_object_object_add(jobj,"rawData",json_object_new_string(packet));
+	switch ( this_format ) {
+		case iMet_XQ2_FORMAT:
+			tmp = do_iMet_XQ2_FORMAT(packet);
+			if ( 0 != tmp ) {
+				json_object_object_add(jobj,"iMet_XQ2_FORMAT",tmp);
+			}
+			break;
+	}
+			
 
-// fprintf(stderr,"# %s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
-// fprintf(stdout,"%s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));	fflush(stdout);
-rc =  serToMQTT_pub(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
-json_object_put(jobj);
-return	rc;
+
+	// fprintf(stderr,"# %s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
+	// fprintf(stdout,"%s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));	fflush(stdout);
+	rc =  serToMQTT_pub(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
+	json_object_put(jobj);
+	if ( 0 != tmp ) {
+		json_object_put(tmp);
+	}
+	return	rc;
 }
 
 
@@ -187,43 +206,53 @@ static int serial_process(int serialfd) {
 
 return	rc;
 }
-static void  _do_hex(int *iP, char *s )
-{
+static void  _do_hex(int *iP, char *s ) {
+	int i,j;
 
-int i,j;
-
-j = sscanf(s,"%x",&i);
+	j = sscanf(s,"%x",&i);
 
 
-if ( 1 == j )	*iP = i;
+	if ( 1 == j ){
+		*iP = i;
+	}
+}
+static void _do_format(char *s ) {
+	if ( 0 == strcmp(s,"XQ" )) {
+		this_format = iMet_XQ2_FORMAT;
+	}
+
+	if ( NO_FORMAT == this_format ) {
+		fprintf(stderr,"# Bad format %s\n",s);
+		fprintf(stderr,"# iMet_XQ2_FORMAT=XQ\n");
+		exit(1);
+	}
+
+
 }
 static void _do_command( char * s)
 {
-/* s contains one command of the type  $cmd=$parameter */
-char	buffer[256] = {};
-char	*p,*q;
+	/* s contains one command of the type  $cmd=$parameter */
+	char	buffer[256] = {};
+	char	*p,*q;
 
-strncpy(buffer,s,sizeof(buffer) - 1);
+	strncpy(buffer,s,sizeof(buffer) - 1);
 
-q= buffer;
-p = strsep(&q,"=");
-/* p is the command and q is the paramenter */
-if ( 0 == strcmp(p,"stx"))
-	{
-	local_stx = q[0];
-	if ( 0 == strncmp(q,"0x",2) || 0 == strncmp(q,"0X",2))
-		 _do_hex(&local_stx,q);
-	}
-else if ( 0 == strcmp(p,"etx"))
-	{
-	local_etx = q[0];
-	if ( 0 == strncmp(q,"0x",2) || 0 == strncmp(q,"0X",2))
-		 _do_hex(&local_etx,q);
-	}
-else
-	{
-	fprintf(stderr,"# -M option '%s' not supported.\n",s);
-	exit(1);
+	q= buffer;
+	p = strsep(&q,"=");
+	/* p is the command and q is the paramenter */
+	if ( 0 == strcmp(p,"stx")) {
+		local_stx = q[0];
+		if ( 0 == strncmp(q,"0x",2) || 0 == strncmp(q,"0X",2))
+			 _do_hex(&local_stx,q);
+	} else if ( 0 == strcmp(p,"etx")) {
+		local_etx = q[0];
+		if ( 0 == strncmp(q,"0x",2) || 0 == strncmp(q,"0X",2))
+			 _do_hex(&local_etx,q);
+	} else if ( 0 == strcmp(p,"format")) {
+		_do_format(q);
+	} else {
+		fprintf(stderr,"# -M option '%s' not supported.\n",s);
+		exit(1);
 	}
 }
 static void _overRide(char *s )

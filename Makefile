@@ -8,7 +8,7 @@ serToMQTT: main.o protocol_text.o protocol_NMEA0183.o
 main.o: main.c
 	$(CC)  -c main.c  $(CFLAGS) -I/usr/include/json-c/
 
-protocol_text.o: protocol_text.c
+protocol_text.o: protocol_text.c iMet_XQ2.c
 	$(CC)  -c protocol_text.c  $(CFLAGS) -I/usr/include/json-c/
 
 protocol_NMEA0183.o: protocol_NMEA0183.c

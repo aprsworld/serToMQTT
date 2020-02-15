@@ -29,6 +29,7 @@ static int mqtt_port=1883;
 static char mqtt_host[256];
 static char mqtt_topic[256];
 static struct mosquitto *mosq;
+static int disable_mqtt_output;
 
 static void _mosquitto_shutdown(void);
 
@@ -240,12 +241,9 @@ if ( 0 == p->label )
 	
 *modep = p;
 }
-static struct mosquitto *_mosquitto_startup(void) {
+static struct mosquitto * _mosquitto_startup(void) {
 	char clientid[24];
 	int rc = 0;
-
-
-	fprintf(stderr,"# mqtt-send-example start-up\n");
 
 
 	fprintf(stderr,"# initializing mosquitto MQTT library\n");
@@ -257,11 +255,9 @@ static struct mosquitto *_mosquitto_startup(void) {
 
 	if (mosq) {
 		mosquitto_connect_callback_set(mosq, connect_callback);
-//		mosquitto_message_callback_set(mosq, message_callback);
 
 		fprintf(stderr,"# connecting to MQTT server %s:%d\n",mqtt_host,mqtt_port);
 		rc = mosquitto_connect(mosq, mqtt_host, mqtt_port, 60);
-		// if ( 0 != rc )	what do I do?
 
 		/* start mosquitto network handling loop */
 		mosquitto_loop_start(mosq);
@@ -288,31 +284,37 @@ mosquitto_lib_cleanup();
 }
 int serToMQTT_pub(const char *message ) {
 	int rc = 0;
+	
+	if ( 0 == disable_mqtt_output ) {
 
-	static int messageID;
-	/* instance, message ID pointer, topic, data length, data, qos, retain */
-	rc = mosquitto_publish(mosq, &messageID, mqtt_topic, strlen(message), message, 0, 0); 
+		static int messageID;
+		/* instance, message ID pointer, topic, data length, data, qos, retain */
+		rc = mosquitto_publish(mosq, &messageID, mqtt_topic, strlen(message), message, 0, 0); 
 
-	if (0 != outputDebug) fprintf(stderr,"# mosquitto_publish provided messageID=%d and return code=%d\n",messageID,rc);
+		if (0 != outputDebug) fprintf(stderr,"# mosquitto_publish provided messageID=%d and return code=%d\n",messageID,rc);
 
-	/* check return status of mosquitto_publish */ 
-	/* this really just checks if mosquitto library accepted the message. Not that it was actually send on the network */
-	if ( MOSQ_ERR_SUCCESS == rc ) {
-		/* successful send */
-	} else if ( MOSQ_ERR_INVAL == rc ) {
-		fprintf(stderr,"# mosquitto error invalid parameters\n");
-	} else if ( MOSQ_ERR_NOMEM == rc ) {
-		fprintf(stderr,"# mosquitto error out of memory\n");
-	} else if ( MOSQ_ERR_NO_CONN == rc ) {
-		fprintf(stderr,"# mosquitto error no connection\n");
-	} else if ( MOSQ_ERR_PROTOCOL == rc ) {
-		fprintf(stderr,"# mosquitto error protocol\n");
-	} else if ( MOSQ_ERR_PAYLOAD_SIZE == rc ) {
-		fprintf(stderr,"# mosquitto error payload too large\n");
-	} else if ( MOSQ_ERR_MALFORMED_UTF8 == rc ) {
-		fprintf(stderr,"# mosquitto error topic is not valid UTF-8\n");
+		/* check return status of mosquitto_publish */ 
+		/* this really just checks if mosquitto library accepted the message. Not that it was actually send on the network */
+		if ( MOSQ_ERR_SUCCESS == rc ) {
+			/* successful send */
+		} else if ( MOSQ_ERR_INVAL == rc ) {
+			fprintf(stderr,"# mosquitto error invalid parameters\n");
+		} else if ( MOSQ_ERR_NOMEM == rc ) {
+			fprintf(stderr,"# mosquitto error out of memory\n");
+		} else if ( MOSQ_ERR_NO_CONN == rc ) {
+			fprintf(stderr,"# mosquitto error no connection\n");
+		} else if ( MOSQ_ERR_PROTOCOL == rc ) {
+			fprintf(stderr,"# mosquitto error protocol\n");
+		} else if ( MOSQ_ERR_PAYLOAD_SIZE == rc ) {
+			fprintf(stderr,"# mosquitto error payload too large\n");
+		} else if ( MOSQ_ERR_MALFORMED_UTF8 == rc ) {
+			fprintf(stderr,"# mosquitto error topic is not valid UTF-8\n");
+		} else {
+			fprintf(stderr,"# mosquitto unknown error = %d\n",rc);
+		}
 	} else {
-		fprintf(stderr,"# mosquitto unknown error = %d\n",rc);
+		fputs(message,stdout);
+		fflush(stdout);
 	}
 
 
@@ -324,12 +326,34 @@ int main(int argc, char **argv) {
 	int serialfd;
 	int i,n;
 	int _baud = B4800;
-	MODES *_mode;
+	MODES *_mode = 0;
 	char *_M = 0;
 
+	while (1) {
+		// int this_option_optind = optind ? optind : 1;
+		int option_index = 0;
+		static struct option long_options[] = {
+			/* normal program */
+		        {"help",                             no_argument,       0, 'h' },
+		        {"stdout",                           no_argument,       0, 'N' },
+		        {"protocol",                         1,                 0, 'm' },
+		        {"special-handling",                 1,                 0, 'M' },
+		        {"mqtt-host",                        1,                 0, 'H' },
+			{},
+		};
+
+		n = getopt_long(argc, argv, "a:b:hi:s:vt:m:M:H:P:T:", long_options, &option_index);
+
+		if (n == -1) {
+			break;
+		}
+		
+
 	/* command line arguments */
-	while ((n = getopt (argc, argv, "a:b:hi:s:vt:m:M:H:P:T:")) != -1) {
 		switch (n) {
+			case 'N':
+				disable_mqtt_output = 1;
+				break;
 			case 'T':	
 				strncpy(mqtt_topic,optarg,sizeof(mqtt_topic));
 				break;
@@ -378,28 +402,47 @@ int main(int argc, char **argv) {
 				fprintf(stderr,"# verbose (debugging) output to stderr enabled\n");
 				break;
 			case 'h':
-				fprintf(stdout,"# -M\t\tmode or protocol special handling\n");
-				fprintf(stdout,"# -T\t\tmqtt topic\n");
-				fprintf(stdout,"# -H\t\tmqtt host\n");
-				fprintf(stdout,"# -p\t\tmqtt port\n");
-				fprintf(stdout,"# -a\t\tseconds\tTerminate after seconds without data\n");
-				fprintf(stdout,"# -t\t\tmilliseconds\tTimeout packet after milliseconds since start\n");
-				fprintf(stdout,"# -s\t\tseconds\tstartup delay\n");
-				fprintf(stdout,"# -v\t\tOutput verbose / debugging to stderr\n");
-				fprintf(stdout,"# -i\t\tserial device to use (default: /dev/ttyAMA0)\n");
-				fprintf(stdout,"# -b\t\tserial baud to use (default: 4800)\n");
+				fprintf(stdout,"# --stdout\t\tdisable mqtt and substitue stdout\n");
+				fprintf(stdout,"# -M\t\t\tmode or protocol special handling\n");
+				fprintf(stdout,"# --special-handing\t=mode or protocol special handling\n");
+				fprintf(stdout,"# -T\t\t\tmqtt topic\n");
+				fprintf(stdout,"# -H\t\t\tmqtt host\n");
+				fprintf(stdout,"# -p\t\t\tmqtt port\n");
+				fprintf(stdout,"# -m\t\t\tprotocol\n");
+				fprintf(stdout,"# --protocal\t\t=protocol\n");
+				fprintf(stdout,"# -a\t\t\tseconds\tTerminate after seconds without data\n");
+				fprintf(stdout,"# -t\t\t\tmilliseconds\tTimeout packet after milliseconds since start\n");
+				fprintf(stdout,"# -s\t\t\tseconds\tstartup delay\n");
+				fprintf(stdout,"# -v\t\t\tOutput verbose / debugging to stderr\n");
+				fprintf(stdout,"# -i\t\t\tserial device to use (default: /dev/ttyAMA0)\n");
+				fprintf(stdout,"# -b\t\t\tserial baud to use (default: 4800)\n");
 				fprintf(stdout,"#\n");
-				fprintf(stdout,"# -h\t\tThis help message then exit\n");
+				fprintf(stdout,"# -h\t\t\tThis help message then exit\n");
+				fprintf(stdout,"# --help\t\tThis help message then exit\n");
 				fprintf(stdout,"#\n");
 				exit(0);
 		}
 	}
-	if ( 0 == _mode ) { fputs("# -m is missing and is required.\n",stderr); exit(1); }
-	if ( ' ' >= mqtt_host[0] ) { fputs("# <-H mqtt_host>	\n",stderr); exit(1); } else fprintf(stderr,"# mqtt_host=%s\n",mqtt_host);
-	if ( ' ' >= mqtt_topic[0] ) { fputs("# <-T mqtt_topic>	\n",stderr); exit(1); } else fprintf(stderr,"# mqtt_topic=%s\n",mqtt_topic);
+	if ( 0 == _mode ) { 
+		fputs("# -m is missing and is required.\n",stderr); 
+		exit(1); 
+	}
+	if ( 0 == disable_mqtt_output && ' ' >= mqtt_host[0] ) { 
+		fputs("# <-H mqtt_host>	\n",stderr); 
+		exit(1); 
+	} else {
+		fprintf(stderr,"# mqtt_host=%s\n",mqtt_host);
+	}
+	if ( 0 == disable_mqtt_output && ' ' >= mqtt_topic[0] ) { 
+		fputs("# <-T mqtt_topic>	\n",stderr); 
+		exit(1); 
+	} else {
+		fprintf(stderr,"# mqtt_topic=%s\n",mqtt_topic);
+	}
 
-if ( 0 == _mosquitto_startup() )
-	return	1;
+	if ( 0 == disable_mqtt_output && 0 == _mosquitto_startup() ) {
+		return	1;
+	}
 
 
 	/* install signal handler */
@@ -424,7 +467,9 @@ if ( 0 == _mosquitto_startup() )
 
 	(*_mode->packet_processor_func)(serialfd,_M );	/* call the mode specified on the cmd_line with its special stuff */
 
-	_mosquitto_shutdown();
+	if ( 0 == disable_mqtt_output ) {
+		_mosquitto_shutdown();
+	}
 
-	exit(0);
+	return	0;
 }
