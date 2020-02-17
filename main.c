@@ -24,6 +24,8 @@
 #include <string.h>
 #include <json.h>
 #include <mosquitto.h>
+#include <time.h>
+#include "serToMQTT.h"
 
 static int mqtt_port=1883;
 static char mqtt_host[256];
@@ -53,6 +55,33 @@ uint64_t microtime() {
 	return ((uint64_t)time.tv_sec * 1000000) + time.tv_usec;
 }
 
+struct json_object *json_division(double value,char *description, char *units) {
+	struct json_object *jobj = json_object_new_object();
+	json_object_object_add(jobj,"value",json_object_new_double(value));
+	json_object_object_add(jobj,"description",json_object_new_string(description));
+	json_object_object_add(jobj,"units",json_object_new_string(units));
+	return	jobj;
+}
+
+
+json_object *json_object_new_dateTime(void) {
+	struct tm *now;
+	struct timeval time;
+	char timestamp[32];
+        gettimeofday(&time, NULL);
+	now = localtime(&time.tv_sec);
+	if ( 0 == now ) {
+		fprintf(stderr,"# error calling localtime() %s",strerror(errno));
+		exit(1);
+	}
+
+	snprintf(timestamp,sizeof(timestamp),"%04d-%02d-%02d %02d:%02d:%02d.%03ld,",
+		1900 + now->tm_year,1 + now->tm_mon, now->tm_mday,now->tm_hour,now->tm_min,now->tm_sec,time.tv_usec/1000);
+
+	
+	return	json_object_new_string(timestamp);
+
+}
 void connect_callback(struct mosquitto *mosq, void *obj, int result) {
 	printf("# connect_callback, rc=%d\n", result);
 }
@@ -409,7 +438,7 @@ int main(int argc, char **argv) {
 				fprintf(stdout,"# -H\t\t\tmqtt host\n");
 				fprintf(stdout,"# -p\t\t\tmqtt port\n");
 				fprintf(stdout,"# -m\t\t\tprotocol\n");
-				fprintf(stdout,"# --protocal\t\t=protocol\n");
+				fprintf(stdout,"# --protocol\t\t=protocol\n");
 				fprintf(stdout,"# -a\t\t\tseconds\tTerminate after seconds without data\n");
 				fprintf(stdout,"# -t\t\t\tmilliseconds\tTimeout packet after milliseconds since start\n");
 				fprintf(stdout,"# -s\t\t\tseconds\tstartup delay\n");

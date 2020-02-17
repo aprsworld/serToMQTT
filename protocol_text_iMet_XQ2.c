@@ -12,15 +12,6 @@ static char *_date_clean(char *s ) {
 	return	buffer;
 }
 
-static struct json_object *json_division(double value,char *description, char *units) {
-	struct json_object *jobj = json_object_new_object();
-	json_object_object_add(jobj,"value",json_object_new_double(value));
-	json_object_object_add(jobj,"description",json_object_new_string(description));
-	json_object_object_add(jobj,"units",json_object_new_string(units));
-	return	jobj;
-}
-
-
 
 static struct json_object *do_iMet_XQ2_FORMAT(char *s) {
 	struct json_object *jobj;

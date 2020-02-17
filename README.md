@@ -28,11 +28,11 @@ text|text that has a format stx payload ext
 
 ## Examples 
 
-./serToMQTT -T /toStation/A2744 -m nmea0183 -H localhost -i /dev/ttyUSB2 -b 4800
+`./serToMQTT -T /toStation/A2744 -m nmea0183 -H localhost -i /dev/ttyUSB2 -b 4800`
 
-./serToMQTT -m text -i /dev/ttyUSB1 -b 115200 -H localhost -T whatever
+`./serToMQTT -m text -i /dev/ttyUSB1 -b 230400 -H localhost -T whatever -M format=TRI`
 
- ./serToMQTT -T /toStation/A2744 -m text -H localhost -i /dev/ttyUSB0 -b 57600 -M "stx=X etx=0x0d" -t 1024
+ `./serToMQTT -T /toStation/A2744 -m text -H localhost -i /dev/ttyUSB0 -b 57600 -M "stx=X etx=0x0d format=XQ" -t 1024`
 
 ## Command line switches
 
@@ -98,17 +98,17 @@ As an easier alternative you can specify both stx and etx in hexidecimal.   Wher
 
 Command line in the lab looks like:
 
-` ./serToMQTT -T /toStation/A2744 -m text -H localhost -i /dev/ttyUSB0 -b 57600 -M "stx=X etx=0x0d" -t 1024`
+` ./serToMQTT -T /toStation/A2744 -m text -H localhost -i /dev/ttyUSB0 -b 57600 -M "stx=X etx=0x0d format=XQ " -t 1280`
 
 The critcal difference is specifying the stx and etx using the -M option and specifying the packet time out.   The time out by 
-default is 500 mSeconds.   This device seems to be sending packets once per second so the need for 1024 mSeconds.   This
+default is 500 mSeconds.   This device seems to be sending packets once per second so the need for 1280 mSeconds.   This
 was determined experimetally.
 
 ## TriSonica Mini
 
 Command line in the lab looks like:
 
-`./serToMQTT -m text -i /dev/ttyUSB1 -b 115200 -H localhost -T /toStation/A2744`
+`./serToMQTT -m text -i /dev/ttyUSB1 -b 115200 -H localhost -T /toStation/A2744 -M format=TRI` 
 
 The defaults of stx='S' and etx=0x0a are used, and need not be specified.
 

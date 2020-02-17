@@ -23,6 +23,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <json.h>
+#include "serToMQTT.h"
 
 extern   void set_blocking (int fd, int vmin, int vtime) ;
 extern int serToMQTT_pub(const char *message );

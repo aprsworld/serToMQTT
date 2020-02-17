@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <json.h>
+#include "serToMQTT.h"
 
 extern   void set_blocking (int fd, int vmin, int vtime) ;
 
@@ -61,11 +62,14 @@ struct_data_block data_block[DATA_BLOCK_N];
 enum input_formats {
 	NO_FORMAT,
 	iMet_XQ2_FORMAT,
+	TRISONIC_MINI_FORMAT,
 };
 
 #include "protocol_text_iMet_XQ2.c"
+#include "protocol_text_TriSoncica_Mini.c"
 
 static enum input_formats this_format = NO_FORMAT;
+
 
 static int text_packet_processor(char *packet, int length, uint64_t microtime_start, int millisec_since_start) {
 	int rc = 0;
@@ -83,6 +87,7 @@ static int text_packet_processor(char *packet, int length, uint64_t microtime_st
 	struct json_object *tmp = 0;
 
 	jobj = json_object_new_object();
+	json_object_object_add(jobj,"dateTime",json_object_new_dateTime());
 	snprintf(buffer,sizeof(buffer),"%lu",microtime_start);
 	json_object_object_add(jobj,"epochMicroseconds",json_object_new_string(buffer));
 	json_object_object_add(jobj,"milliSecondSinceStart",json_object_new_int(millisec_since_start));
@@ -92,6 +97,12 @@ static int text_packet_processor(char *packet, int length, uint64_t microtime_st
 			tmp = do_iMet_XQ2_FORMAT(packet);
 			if ( 0 != tmp ) {
 				json_object_object_add(jobj,"iMet_XQ2_FORMAT",tmp);
+			}
+			break;
+		case TRISONIC_MINI_FORMAT:
+			tmp = do_TRISONIC_MINI_FORMAT(packet);
+			if ( 0 != tmp ) {
+				json_object_object_add(jobj,"Trisonic_Mini_FORMAT",tmp);
 			}
 			break;
 	}
@@ -126,7 +137,7 @@ static int serial_process(int serialfd) {
 	char buff[1];
 
 
-	static char packet[128];
+	static char packet[526];
 	static int packet_pos=0;
 	static uint64_t microtime_start=0;
 	static enum states state=STATE_LOOKING_FOR_STX;
@@ -187,6 +198,7 @@ static int serial_process(int serialfd) {
 			if ( local_etx == buff[i] ) {
 				state=STATE_LOOKING_FOR_STX;
 
+				alarm(0);	/* cancel alarm while we are processing packet */
 				/* process packet */
 				rc = text_packet_processor(packet,packet_pos,microtime_start,milliseconds_since_stx);
 			}
@@ -219,6 +231,9 @@ static void  _do_hex(int *iP, char *s ) {
 static void _do_format(char *s ) {
 	if ( 0 == strcmp(s,"XQ" )) {
 		this_format = iMet_XQ2_FORMAT;
+	}
+	if ( 0 == strcmp(s,"TRI" )) {
+		this_format = TRISONIC_MINI_FORMAT;
 	}
 
 	if ( NO_FORMAT == this_format ) {
