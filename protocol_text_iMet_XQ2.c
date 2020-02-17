@@ -34,35 +34,35 @@ static struct json_object *do_iMet_XQ2_FORMAT(char *s) {
 		/* json_object_object_add(jobj,"XQ",json_object_new_string(p))*/;
 	}
 	if ( 0 != (p = strsep(&q,",") )) {
-		json_object_object_add(jobj,"Preasure",json_division(atof(p)/100.0,"Atmospheric preasure","hPa"));
+		json_object_object_add(jobj,"pressure",json_division(atof(p)/100.0,"atmospheric pressure","hPa"));
 	}
 	if ( 0 != (p = strsep(&q,",") )) {
-		json_object_object_add(jobj,"Temperature",json_division(atof(p)/100.0,"Atmospheric temperature","degree C"));
+		json_object_object_add(jobj,"temperature",json_division(atof(p)/100.0,"atmospheric temperature","degrees C"));
 	}
 	if ( 0 != (p = strsep(&q,",") )) {
-		json_object_object_add(jobj,"RelativeHumidity",json_division(atof(p)/10.0,"Relative humidity","percent"));
+		json_object_object_add(jobj,"relativeHumidity",json_division(atof(p)/10.0,"relative humidity","%"));
 	}
 	if ( 0 != (p = strsep(&q,",") )) {
-		json_object_object_add(jobj,"RelativeHumidityTemperature",
-			json_division(atof(p)/100.0,"Relative temperature","degree C"));
+		json_object_object_add(jobj,"relativeHumidityTemperature",
+			json_division(atof(p)/100.0,"relative temperature","degrees C"));
 	}
 	if ( 0 != (p = strsep(&q,",") )) {
-		json_object_object_add(jobj,"Date",json_object_new_string(_date_clean(p)));
+		json_object_object_add(jobj,"date",json_object_new_string(_date_clean(p)));
 	}
 	if ( 0 != (p = strsep(&q,",") )) {
-		json_object_object_add(jobj,"Time",json_object_new_string(p));
+		json_object_object_add(jobj,"time",json_object_new_string(p));
 	}
 	if ( 0 != (p = strsep(&q,",") )) {
-		json_object_object_add(jobj,"Longitude", json_division(atof(p)/10000000.0,"Longitude","degree E-W"));
+		json_object_object_add(jobj,"longitude", json_division(atof(p)/10000000.0,"longitude","degrees"));
 	}
 	if ( 0 != (p = strsep(&q,",") )) {
-		json_object_object_add(jobj,"Latitude",json_division(atof(p)/10000000.0,"Latitue","degree N-S"));
+		json_object_object_add(jobj,"latitude",json_division(atof(p)/10000000.0,"latitude","degrees"));
 	}
 	if ( 0 != (p = strsep(&q,",") )) {
-		json_object_object_add(jobj,"Altitude", json_division(atof(p)/1000.0,"Elevation","Meters"));
+		json_object_object_add(jobj,"altitude", json_division(atof(p)/1000.0,"altitude","meters"));
 	}
 	if ( 0 != (p = strsep(&q,",") )) {
-		json_object_object_add(jobj,"SateliteCount",json_object_new_int(atoi(p)));
+		json_object_object_add(jobj,"sateliteCount",json_object_new_int(atoi(p)));
 	}
 		
 

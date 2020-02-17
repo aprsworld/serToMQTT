@@ -59,11 +59,11 @@ struct_data_block data_block[DATA_BLOCK_N];
 #include <sys/time.h>
 
 enum input_formats {
-NO_FORMAT,
-iMet_XQ2_FORMAT,
+	NO_FORMAT,
+	iMet_XQ2_FORMAT,
 };
 
-#include "iMet_XQ2.c"
+#include "protocol_text_iMet_XQ2.c"
 
 static enum input_formats this_format = NO_FORMAT;
 
