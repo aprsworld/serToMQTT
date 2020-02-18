@@ -99,6 +99,8 @@ char	buffer[32] = {};
 struct json_object *jobj;
 
 jobj = json_object_new_object();
+json_object_object_add(jobj,"dateTime",json_object_new_dateTime());
+
 snprintf(buffer,sizeof(buffer),"%lu",microtime_start);
 json_object_object_add(jobj,"epochMicroseconds",json_object_new_string(buffer));
 json_object_object_add(jobj,"milliSecondSinceStart",json_object_new_int(millisec_since_start));
