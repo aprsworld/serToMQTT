@@ -116,7 +116,7 @@ The defaults of stx='S' and etx=0x0a are used, and need not be specified.
 
 Command line in the lab looks like:
 
-`./serToMQTT -T /toStation/A2744 -m nmea0183 -H localhost -i /dev/ttyUSB2 -b 4800`
+`./serToMQTT -T /toStation/A2744 -m nmea0183 -H localhost -i /dev/ttyUSB2 -b 4800 -M format=NMEA`
 
 The defaults of stx='$' and etx=newline are used, and need not be specified.
 
