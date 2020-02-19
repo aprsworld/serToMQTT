@@ -82,14 +82,14 @@ static int text_packet_processor(char *packet, int length, uint64_t microtime_st
 	packet[length]='\0';
 
 	
-	char	buffer[32] = {};
+//	char	buffer[32] = {};
 	struct json_object *jobj;
 	struct json_object *tmp = 0;
 
 	jobj = json_object_new_object();
-	json_object_object_add(jobj,"dateTime",json_object_new_dateTime());
-	snprintf(buffer,sizeof(buffer),"%lu",microtime_start);
-	json_object_object_add(jobj,"epochMicroseconds",json_object_new_string(buffer));
+	json_object_object_add(jobj,"date",json_object_new_dateTime());
+//	snprintf(buffer,sizeof(buffer),"%lu",microtime_start);
+//	json_object_object_add(jobj,"epochMicroseconds",json_object_new_string(buffer));
 	json_object_object_add(jobj,"milliSecondSinceStart",json_object_new_int(millisec_since_start));
 	json_object_object_add(jobj,"rawData",json_object_new_string(packet));
 	switch ( this_format ) {
