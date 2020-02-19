@@ -30,6 +30,7 @@ extern int serToMQTT_pub(const char *message );
 
 static int local_stx = '$';
 static int local_etx = '\n';
+static int _NMEA_FORMAT;
 
 
 
@@ -56,6 +57,7 @@ struct_data_block data_block[DATA_BLOCK_N];
 
 
 #include <sys/time.h>
+#include "protocol_NMEA0183.formatter.c"
 
 
 
@@ -95,22 +97,23 @@ int nmea_packet_processor(char *packet, int length, uint64_t microtime_start, in
 		return rc;
 	}
 
-//char	buffer[32] = {};
-struct json_object *jobj;
+	struct json_object *jobj;
 
-jobj = json_object_new_object();
-json_object_object_add(jobj,"date",json_object_new_dateTime());
+	jobj = json_object_new_object();
+	json_object_object_add(jobj,"date",json_object_new_dateTime());
 
-//snprintf(buffer,sizeof(buffer),"%lu",microtime_start);
-//json_object_object_add(jobj,"epochMicroseconds",json_object_new_string(buffer));
-json_object_object_add(jobj,"milliSecondSinceStart",json_object_new_int(millisec_since_start));
-json_object_object_add(jobj,"rawData",json_object_new_string(packet));
+	json_object_object_add(jobj,"milliSecondSinceStart",json_object_new_int(millisec_since_start));
+	json_object_object_add(jobj,"rawData",json_object_new_string(packet));
 
-// fprintf(stderr,"# %s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
-rc = serToMQTT_pub(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
-json_object_put(jobj);
+	if ( 0 != _NMEA_FORMAT ) {
+		json_object_object_add(jobj,"formattedData", do_NMEA0183_FORMAT(packet));
+	}
 
-return	rc;
+	// fprintf(stderr,"# %s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
+	rc = serToMQTT_pub(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
+	json_object_put(jobj);
+
+	return	rc;
 }
 
 enum states {
@@ -206,23 +209,35 @@ static int  _serial_process(int serialfd) {
 
 return	rc;
 }
-static void _do_command( char * s)
-{
-/* s contains one command of the type  $cmd=$parameter */
-char	buffer[256] = {};
-char	*p,*q;
+static void _do_format(char *s ) {
+	if ( 0 == strcmp(s,"NMEA" )) {
+		_NMEA_FORMAT = 1;
+	} else {
+		fprintf(stderr,"# Bad format %s\n",s);
+		fprintf(stderr,"# NMEA0183_FORMAT=NMEA\n");
+		exit(1);
+	}
 
-strncpy(buffer,s,sizeof(buffer) - 1);
 
-q= buffer;
-p = strsep(&q,"=");
-/* p is the command and q is the paramenter */
-if ( 0 == strcmp(p,"stx"))
-	local_stx = q[0];
-else if ( 0 == strcmp(p,"etx"))
-	local_etx = q[0];
-else
-	{
+}
+static void _do_command( char * s) {
+	/* s contains one command of the type  $cmd=$parameter */
+	char	buffer[256] = {};
+	char	*p,*q;
+
+	strncpy(buffer,s,sizeof(buffer) - 1);
+
+	q= buffer;
+	p = strsep(&q,"=");
+	/* p is the command and q is the paramenter */
+	if ( 0 == strcmp(p,"stx")) {
+		local_stx = q[0];
+	}
+	else if ( 0 == strcmp(p,"etx")) {
+		local_etx = q[0];
+	} else if ( 0 == strcmp(p,"format")) {
+		_do_format(q);
+	} else {
 	fprintf(stderr,"# -M option '%s' not supported.\n",s);
 	exit(1);
 	}
