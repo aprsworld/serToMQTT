@@ -194,81 +194,78 @@ else
 	fprintf(stderr,"# %s owner=%d group=%d\n",s,buf.st_uid,buf.st_gid);
 	}
 }
-void text_packet_processor(int serialfd,char *special_handling )
-{
-extern void text_engine(int serialfd,char *special_handling );
+void text_packet_processor(int serialfd,char *special_handling ) {
+	extern void text_engine(int serialfd,char *special_handling );
 
-text_engine(serialfd,special_handling);
-/* this is a wrapper for the actual function in text_engine.c */
+	text_engine(serialfd,special_handling);
+	/* this is a wrapper for the actual function in protocol_text.c */
 }
-void nmea0183_packet_processor(int serialfd,char *special_handling )
-{
-extern void nmea0183_engine(int serialfd,char *special_handling );
-nmea0183_engine(serialfd,special_handling);
-/* this is a wrapper for the actual function in nmea0183_engine.c */
+void nmea0183_packet_processor(int serialfd,char *special_handling ) {
+	extern void nmea0183_engine(int serialfd,char *special_handling );
+	nmea0183_engine(serialfd,special_handling);
+	/* this is a wrapper for the actual function in protocol_NMEA0183.c */
 }
 static MODES modes[] = {
-{"text",text_packet_processor},
-{"nmea0183",nmea0183_packet_processor},
-{},	/* sentinnel */
+	{"text",text_packet_processor},
+	{"nmea0183",nmea0183_packet_processor},
+	{},	/* sentinnel */
 };
 
-static void _do_speed( int *speed,char *s )
-{
-char	buffer[32];
-if ( 'B' != s[0] )	{	snprintf(buffer,sizeof(buffer),"B%s",s);	s = buffer;	}
-if ( 0 == strcmp(s,"B0"))	*speed = B0;
-else if ( 0 == strcmp(s,"B50"))	*speed = B50;
-else if ( 0 == strcmp(s,"B75"))	*speed = B75;
-else if ( 0 == strcmp(s,"B110"))	*speed = B110;
-else if ( 0 == strcmp(s,"B134"))	*speed = B134;
-else if ( 0 == strcmp(s,"B150"))	*speed = B150;
-else if ( 0 == strcmp(s,"B200"))	*speed = B200;
-else if ( 0 == strcmp(s,"B300"))	*speed = B300;
-else if ( 0 == strcmp(s,"B600"))	*speed = B600;
-else if ( 0 == strcmp(s,"B1200"))	*speed = B1200;
-else if ( 0 == strcmp(s,"B1800"))	*speed = B1800;
-else if ( 0 == strcmp(s,"B2400"))	*speed = B2400;
-else if ( 0 == strcmp(s,"B4800"))	*speed = B4800;
-else if ( 0 == strcmp(s,"B9600"))	*speed = B9600;
-else if ( 0 == strcmp(s,"B19200"))	*speed = B19200;
-else if ( 0 == strcmp(s,"B38400"))	*speed = B38400;
-else if ( 0 == strcmp(s,"B57600"))	*speed = B57600;
-else if ( 0 == strcmp(s,"B115200"))	*speed = B115200;
-else if ( 0 == strcmp(s,"B230400"))	*speed = B230400;
-else 
-	{
-	fprintf(stderr,"# BAD -b %s\n"
-			"# try -b 115200\n",s);
-	exit(1);
+static void _do_speed( int *speed,char *s ) {
+	char	buffer[32];
+	if ( 'B' != s[0] )	{	snprintf(buffer,sizeof(buffer),"B%s",s);	s = buffer;	}
+	if ( 0 == strcmp(s,"B0"))	*speed = B0;
+	else if ( 0 == strcmp(s,"B50"))	*speed = B50;
+	else if ( 0 == strcmp(s,"B75"))	*speed = B75;
+	else if ( 0 == strcmp(s,"B110"))	*speed = B110;
+	else if ( 0 == strcmp(s,"B134"))	*speed = B134;
+	else if ( 0 == strcmp(s,"B150"))	*speed = B150;
+	else if ( 0 == strcmp(s,"B200"))	*speed = B200;
+	else if ( 0 == strcmp(s,"B300"))	*speed = B300;
+	else if ( 0 == strcmp(s,"B600"))	*speed = B600;
+	else if ( 0 == strcmp(s,"B1200"))	*speed = B1200;
+	else if ( 0 == strcmp(s,"B1800"))	*speed = B1800;
+	else if ( 0 == strcmp(s,"B2400"))	*speed = B2400;
+	else if ( 0 == strcmp(s,"B4800"))	*speed = B4800;
+	else if ( 0 == strcmp(s,"B9600"))	*speed = B9600;
+	else if ( 0 == strcmp(s,"B19200"))	*speed = B19200;
+	else if ( 0 == strcmp(s,"B38400"))	*speed = B38400;
+	else if ( 0 == strcmp(s,"B57600"))	*speed = B57600;
+	else if ( 0 == strcmp(s,"B115200"))	*speed = B115200;
+	else if ( 0 == strcmp(s,"B230400"))	*speed = B230400;
+	else {
+		fprintf(stderr,"# BAD -b %s\n" "# try -b 115200\n",s);
+		exit(1);
 	}
 }
 char	*strsave(char *s )
 {
-char	*ret_val = 0;
+	char	*ret_val = 0;
 
-ret_val = malloc(strlen(s)+1);
-if ( 0 != ret_val) strcpy(ret_val,s);
-return ret_val;	
+	ret_val = malloc(strlen(s)+1);
+	if ( 0 != ret_val) {
+	       	strcpy(ret_val,s); 
+	}
+	return ret_val;	
 }
 	
-static void set_mode(MODES **modep, char *s )
-{
-MODES *p = modes;
-for ( ; 0 != p->label && 0 != strcmp(s,p->label) ; p++ )
-	;
-
-if ( 0 == p->label )
-	{
-	fputs("# < -m ",stderr);
-	p = modes;
-	for ( ; 0 != p->label; p++ )
-		fprintf(stderr,"%s ",p->label);
-	fputs(">\n",stderr);	
-	exit(1);
+static void set_mode(MODES **modep, char *s ) {
+	MODES *p = modes;
+	for ( ; 0 != p->label && 0 != strcmp(s,p->label) ; p++ ) {
+		;
 	}
-	
-*modep = p;
+
+	if ( 0 == p->label ) {
+		fputs("# < -m ",stderr);
+		p = modes;
+		for ( ; 0 != p->label; p++ ) {
+			fprintf(stderr,"%s ",p->label);
+		}
+		fputs(">\n",stderr);	
+		exit(1);
+	}
+		
+	*modep = p;
 }
 static struct mosquitto * _mosquitto_startup(void) {
 	char clientid[24];
@@ -297,19 +294,19 @@ return	mosq;
 
 static void _mosquitto_shutdown(void) {
 
-if ( mosq ) {
-	
-	/* disconnect mosquitto so we can be done */
-	mosquitto_disconnect(mosq);
-	/* stop mosquitto network handling loop */
-	mosquitto_loop_stop(mosq,0);
+	if ( mosq ) {
+		
+		/* disconnect mosquitto so we can be done */
+		mosquitto_disconnect(mosq);
+		/* stop mosquitto network handling loop */
+		mosquitto_loop_stop(mosq,0);
 
 
-	mosquitto_destroy(mosq);
-	}
+		mosquitto_destroy(mosq);
+		}
 
-fprintf(stderr,"# mosquitto_lib_cleanup()\n");
-mosquitto_lib_cleanup();
+	fprintf(stderr,"# mosquitto_lib_cleanup()\n");
+	mosquitto_lib_cleanup();
 }
 int serToMQTT_pub(const char *message ) {
 	int rc = 0;
@@ -347,7 +344,7 @@ int serToMQTT_pub(const char *message ) {
 	}
 
 
-return	rc;
+	return	rc;
 }
 
 int main(int argc, char **argv) {
@@ -487,9 +484,8 @@ int main(int argc, char **argv) {
 		exit(1);
 	}	
 
-	set_interface_attribs (serialfd, _baud, 0);  // set speed to 4800 bps, 8n1 (no parity)
-//	set_blocking (serialfd, 0, 100);		// blocking with 10 second timeout
-	set_blocking (serialfd, 0, 0);		// blocking with 10 second timeout
+	set_interface_attribs (serialfd, _baud, 0);  /* set speed to default or -b baud  bps, 8n1 (no parity) */
+	set_blocking (serialfd, 0, 0);		/* blocking with 0 second timeout.  this will be re-set in the mode */
 
 	_M = ( 0 == _M ) ? "" : _M;
 

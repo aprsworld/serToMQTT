@@ -117,8 +117,8 @@ int nmea_packet_processor(char *packet, int length, uint64_t microtime_start, in
 }
 
 enum states {
-STATE_LOOKING_FOR_STX,
-STATE_IN_PACKET,
+	STATE_LOOKING_FOR_STX,
+	STATE_IN_PACKET,
 };
 
 
@@ -140,7 +140,6 @@ static int  _serial_process(int serialfd) {
 	n = read (serialfd, buff, sizeof(buff));  // read next character if ready
 	microtime_now=microtime();
 
-//`	printf("# read buff[0]=%c\n",buff[0]);
 
 	/* non-blocking, so we will get here if there was no data available */
 	/* read timeout */
@@ -176,7 +175,6 @@ static int  _serial_process(int serialfd) {
 		}
 
 		if ( STATE_IN_PACKET == state ) {
-//			printf("---> milliseconds_since_stx = %d\n",milliseconds_since_stx);
 			if ( milliseconds_since_stx > milliseconds_timeout ) {
 				packet_pos=0;
 				state=STATE_LOOKING_FOR_STX;
@@ -189,7 +187,7 @@ static int  _serial_process(int serialfd) {
 	
 			if ( '\r' == buff[i] || '\n' == buff[i] ) {
 				state=STATE_LOOKING_FOR_STX;
-
+				alarm(0);
 				/* process packet */
 				rc = nmea_packet_processor(packet,packet_pos,microtime_start,milliseconds_since_stx);
 			}
@@ -289,8 +287,9 @@ void nmea0183_engine(int serialfd,char *special_handling ) {
 			exit(1);
 		} 
 
-		if ( FD_ISSET(serialfd, &read_fd_set) ) 
+		if ( FD_ISSET(serialfd, &read_fd_set) ) {
 			rc = _serial_process(serialfd);
+		} 
 	}
 
 }

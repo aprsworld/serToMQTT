@@ -123,8 +123,8 @@ static int text_packet_processor(char *packet, int length, uint64_t microtime_st
 
 
 enum states {
-STATE_LOOKING_FOR_STX,
-STATE_IN_PACKET,
+	STATE_LOOKING_FOR_STX,
+	STATE_IN_PACKET,
 };
 
 extern uint64_t microtime(); 
@@ -143,12 +143,9 @@ static int serial_process(int serialfd) {
 	static enum states state=STATE_LOOKING_FOR_STX;
 
 	n = read (serialfd, buff, sizeof(buff));  // read next character if ready
-/*   stub stub stub 
-	if ( 0 < n ) write(1,buff,n);	return	rc; */
 	
 	microtime_now=microtime();
 
-//`	printf("# read buff[0]=%c\n",buff[0]);
 
 	/* non-blocking, so we will get here if there was no data available */
 	/* read timeout */
@@ -184,7 +181,6 @@ static int serial_process(int serialfd) {
 		}
 
 		if ( STATE_IN_PACKET == state ) {
-//			printf("---> milliseconds_since_stx = %d\n",milliseconds_since_stx);
 			if ( milliseconds_since_stx > milliseconds_timeout ) {
 				packet_pos=0;
 				state=STATE_LOOKING_FOR_STX;
@@ -272,15 +268,17 @@ static void _do_command( char * s)
 }
 static void _overRide(char *s )
 {
-/*  s can contain commands of the type  $cmd=$parameter with one or more commands sepearted by whitespace */
-char	buffer[256] = {};
-char	*p,*q;
+	/*  s can contain commands of the type  $cmd=$parameter with one or more commands sepearted by whitespace */
+	char	buffer[256] = {};
+	char	*p,*q;
 
-strncpy(buffer,s,sizeof(buffer) - 1);
+	strncpy(buffer,s,sizeof(buffer) - 1);
 
-q= buffer;
-while ( (p = strsep(&q," \t\n\r")) && ('\0' != p[0]) )	// this will find zero or more commands
-	_do_command(p);
+	q= buffer;
+	/* this will find zero or more commands */
+	while ( (p = strsep(&q," \t\n\r")) && ('\0' != p[0]) )	{
+		_do_command(p);
+	}
 }
 
 void text_engine(int serialfd,char *special_handling ) {
