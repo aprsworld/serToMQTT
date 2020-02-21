@@ -138,7 +138,10 @@ static struct json_object * _VTG( char *s ) {
 static struct json_object * _GGA( char *s ) {
 	struct json_object *jobj;
 	char buffer[256];
+	char	timestamp[32];
 	char *p,*q;
+	int degrees;
+	double minutes,value;
 	jobj = json_object_new_object();
 
 	strncpy(buffer,s,sizeof(buffer));
@@ -148,11 +151,93 @@ static struct json_object * _GGA( char *s ) {
 		goto parse_failed;
 	}
 	json_object_object_add(jobj,"messageTtpe",json_object_new_string(p));
-	json_object_object_add(jobj,"noFormatInfo",json_object_new_string("No format information provided."));
 	
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	snprintf(timestamp,sizeof(timestamp),"%2.2s:%2.2s:%s",p,p+2,p+4);
+	json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	/* first 2 bytes is degrees N-S  0-90,  remainder of string is minutes */
+	degrees = atoi(p) / 100;
+	minutes = atof(p+3);
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"latitude",_longitude_latitude(0,degrees,minutes,p));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	/* first 3 bytes is degrees E-W  0-180,  remainder of string is minutes */
+	degrees = atoi(p) / 100;
+	minutes = atof(p+3);
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"longitude",_longitude_latitude(1,degrees,minutes,p));
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"qualityFlag",json_object_new_int(atoi(p)));
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"satCount",json_object_new_int(atoi(p)));
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"HDOP",json_division(atof(p),"horizontal dilution of precision","unknown"));
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	value = atof(p);
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"antennaAlt",json_division(value,"antenna altitude",p));
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	value = atof(p);
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"geodialSep",json_division(value,"geodial separation",p));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"ageDiff",json_int_division(atoi(p),"age of differential correction","seconds"));
+	p = strsep(&q,",*");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"diffID",json_object_new_int(atoi(p)));
+
+
 	parse_failed:
 	return jobj;
-	}
+}
 static struct json_object * _GSA( char *s ) {
 	struct json_object *jobj;
 	char buffer[256];
@@ -438,12 +523,183 @@ static struct json_object * _GSV( char *s ) {
 	parse_failed:
 	json_object_object_add(jobj,"satelites",satelites);
 	return jobj;
-
-
 }
 
-	
+static struct json_object * _GST( char *s ) {
+	struct json_object *jobj;
+	char buffer[256];
+	char timestamp[32];
+	char *p,*q;
+	double value;
+	jobj = json_object_new_object();
+	strncpy(buffer,s,sizeof(buffer));
 
+	q = buffer;
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"messageTtpe",json_object_new_string(p));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	snprintf(timestamp,sizeof(timestamp),"%2.2s:%2.2s:%s",p,p+2,p+4);
+	json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	value = atof(p);
+	json_object_object_add(jobj,"rangeRms", json_division(value,"RMS value of the standard diviation", "meters"));
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	value = atof(p);
+	json_object_object_add(jobj,"stdMajor", json_division(value,"standard deviation of semi-major axis", "meters"));
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	value = atof(p);
+	json_object_object_add(jobj,"stdMinor", json_division(value,"standard deviation of semi-minor axis", "meters"));
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	value = atof(p);
+	json_object_object_add(jobj,"orient", json_int_division(value,"orientation of semi-major axi", "degree"));
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	value = atof(p);
+	json_object_object_add(jobj,"stdLat", json_division(value,"standard deviation of latitude", "meters"));
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	value = atof(p);
+	json_object_object_add(jobj,"stdLong", json_division(value,"standard deviation of longitude", "meters"));
+
+	p = strsep(&q,",*");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	value = atof(p);
+	json_object_object_add(jobj,"stdAlt", json_division(value,"standard deviation of altitude", "meters"));
+	parse_failed:
+	return jobj;
+}
+	
+static struct json_object * _HDT( char *s ) {
+	struct json_object *jobj;
+	char buffer[256];
+	char *p,*q;
+	double value;
+	jobj = json_object_new_object();
+	strncpy(buffer,s,sizeof(buffer));
+
+	q = buffer;
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"messageTtpe",json_object_new_string(p));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	value = atof(p);
+	json_object_object_add(jobj,"currHD", 
+		( '\0' == p[0] ) ? NULL :json_division( value ,"current heading true", "degrees"));
+	
+	parse_failed:
+	return jobj;
+}
+static struct json_object * _ROT( char *s ) {
+	struct json_object *jobj;
+	char buffer[256];
+	char *p,*q;
+	double value;
+	jobj = json_object_new_object();
+	strncpy(buffer,s,sizeof(buffer));
+
+	q = buffer;
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"messageTtpe",json_object_new_string(p));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	value = atof(p);
+	json_object_object_add(jobj,"currROT", 
+		( '\0' == p[0] ) ? NULL :json_division( value ,"current rate of turn", "degrees per minute"));
+	
+	p = strsep(&q,",*");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"validityFlag",json_object_new_string(p));
+	parse_failed:
+	return jobj;
+}
+
+static struct json_object * _HPR( char *s ) {
+	struct json_object *jobj;
+	char buffer[256];
+	char timestamp[32];
+	char *p,*q;
+	double value;
+	jobj = json_object_new_object();
+	strncpy(buffer,s,sizeof(buffer));
+
+	q = buffer;
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"messageTtpe",json_object_new_string(p));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	snprintf(timestamp,sizeof(timestamp),"%2.2s:%2.2s:%s",p,p+2,p+4);
+	json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	value = atof(p);
+	json_object_object_add(jobj,"currHD", 
+		( '\0' == p[0] ) ? NULL :json_division( value ,"current heading true", "degrees"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	value = atof(p);
+	json_object_object_add(jobj,"currPitch", 
+		( '\0' == p[0] ) ? NULL :json_division( value ,"current pitch", "degrees"));
+	p = strsep(&q,",*");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	value = atof(p);
+	json_object_object_add(jobj,"currRoll", 
+		( '\0' == p[0] ) ? NULL :json_division( value ,"current roll", "degrees"));
+	
+	parse_failed:
+	return jobj;
+}
 static struct json_object *do_NMEA0183_FORMAT(char *s) {
 	struct json_object *jobj;
 	jobj = json_object_new_object();
@@ -464,6 +720,14 @@ static struct json_object *do_NMEA0183_FORMAT(char *s) {
 		 json_object_object_add(jobj,"GNSSDOPandActiveSatelites",_GSA(s));	
 	} else if ( 0 == strncmp("GLL",s+3,3)) {
 		 json_object_object_add(jobj,"latitudeAndLongitudeWithTimeofPositionFixAndStatus",_GLL(s));	
+	} else if ( 0 == strncmp("GST",s+3,3)) {
+		 json_object_object_add(jobj,"pseudoRangeErrorStatistics",_GST(s));	
+	} else if ( 0 == strncmp("HDT",s+3,3)) {
+		 json_object_object_add(jobj,"currentHeading",_HDT(s));	
+	} else if ( 0 == strncmp("ROT",s+3,3)) {
+		 json_object_object_add(jobj,"currentHeading",_ROT(s));	
+	} else if ( 0 == strncmp("HPR",s+3,3)) {
+		 json_object_object_add(jobj,"headingPitchRoll",_HPR(s));	
 	}
 	return	jobj;
 }
