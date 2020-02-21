@@ -2,7 +2,7 @@ CC=gcc
 CFLAGS=-I. -Wunused-function  -Wunused-variable -g
 
 serToMQTT: main.o protocol_text.o protocol_NMEA0183.o setDateTimeFromGPS.o
-	$(CC) main.o  protocol_text.o protocol_NMEA0183.o -o serToMQTT $(CFLAGS)  -lm -ljson-c -lmosquitto 
+	$(CC) main.o  protocol_text.o protocol_NMEA0183.o setDateTimeFromGPS.o -o serToMQTT $(CFLAGS)  -lm -ljson-c -lmosquitto 
 
 
 main.o: main.c serToMQTT.h

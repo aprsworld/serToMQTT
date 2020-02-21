@@ -31,6 +31,8 @@ extern int serToMQTT_pub(const char *message );
 static int local_stx = '$';
 static int local_etx = '\n';
 static int _NMEA_FORMAT;
+static int setTimeStartupCount;
+static int setTimeIntervalCount;
 
 
 
@@ -235,8 +237,13 @@ static void _do_command( char * s) {
 		local_etx = q[0];
 	} else if ( 0 == strcmp(p,"format")) {
 		_do_format(q);
+	} else if ( 0 == strcmp(p,"setTimeStartupCount")) {
+		setTimeStartupCount = atoi(q);
+	} else if ( 0 == strcmp(p,"setTimeIntervalCount")) {
+		setTimeIntervalCount = atoi(q);
 	} else {
 	fprintf(stderr,"# -M option '%s' not supported.\n",s);
+	fprintf(stderr,"# [stx, ext ,format ,setTimeStartupCount ,setTimeIntervalCount ]\n");
 	exit(1);
 	}
 }

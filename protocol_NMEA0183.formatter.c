@@ -380,6 +380,9 @@ static struct json_object * _RMC( char *s ) {
 	char *p,*q;
 	int degrees;
 	double minutes;
+	static int count;
+
+	count++;
 
 	strncpy(buffer,s,sizeof(buffer));
 	q = buffer;
@@ -445,6 +448,15 @@ static struct json_object * _RMC( char *s ) {
 	}
 	snprintf(datestamp,sizeof(datestamp),"%2.2s-%2.2s-20%2.2s", p+2,p,p+4);
 	json_object_object_add(jobj,"date",json_object_new_string(datestamp));
+
+	if ( setTimeStartupCount ) {
+		int rc = setDateTimeFromGPS(datestamp,timestamp);
+		if ( 0 == rc ) {
+			setTimeStartupCount--;
+		}
+	} else if ( 0 != setTimeIntervalCount && 0 == (count % setTimeIntervalCount )) {
+		(void) setDateTimeFromGPS(datestamp,timestamp);	/* ignore whether in succeeds */
+	}
 
 
 
@@ -708,10 +720,10 @@ static struct json_object *do_NMEA0183_FORMAT(char *s) {
 	if ( check_the_checksum(s) ) {
 		json_object_object_add(jobj,"Bad checksum",json_object_new_string(""));
 
-	} else if ( 0 == strncmp("GSV",s+3,3)) {
-		 json_object_object_add(jobj,"satelitesCount",_GSV(s));	
 	} else if ( 0 == strncmp("RMC",s+3,3)) {
 		 json_object_object_add(jobj,"recommendedMinimumData",_RMC(s));	
+	} else if ( 0 == strncmp("GSV",s+3,3)) {
+		 json_object_object_add(jobj,"satelitesCount",_GSV(s));	
 	} else if ( 0 == strncmp("VTG",s+3,3)) {
 		 json_object_object_add(jobj,"courseOverGroundAndGroundSpeed",_VTG(s));	
 	} else if ( 0 == strncmp("GGA",s+3,3)) {
