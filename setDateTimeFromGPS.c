@@ -38,7 +38,7 @@ int setDateTimeFromGPS(char *gps_date,char *gps_time ) {
 			fprintf(stderr,"# cannot settimeofday().  %s\n",strerror(errno));
 		} 
 		fprintf(stderr,"# settimeofday=%s %s\n",gps_date,gps_time);
-		fprintf(stderr,"# settimeofday delta %d seconds %d micro seconds\n",
+		fprintf(stderr,"# settimeofday delta %ld seconds %ld micro seconds\n",
 			tv_before.tv_sec - tv.tv_sec, tv_before.tv_usec - tv.tv_usec);
 	}
 	
