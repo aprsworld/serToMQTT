@@ -28,43 +28,47 @@ text|text that has a format stx payload ext
 
 ## Examples 
 
-`./serToMQTT -T /toStation/A2744 -m nmea0183 -H localhost -i /dev/ttyUSB2 -b 4800`
+`./serToMQTT --mqtt-topic  /toStation/A2744 --protocol nmea0183 --mqtt-host localhost --input-port /dev/ttyUSB2 --input-speed 4800`
 
-`./serToMQTT -m text -i /dev/ttyUSB1 -b 230400 -H localhost -T whatever -M format=TRI`
+`./serToMQTT --protocol text --input-port /dev/ttyUSB1 --input-speed 230400 --mqtt-host localhost --mqtt-topic whatever -M format=TRI`
 
- `./serToMQTT -T /toStation/A2744 -m text -H localhost -i /dev/ttyUSB0 -b 57600 -M "stx=X etx=0x0d format=XQ" -t 1024`
+ `./serToMQTT --mqtt-topic /toStation/A2744 --protocol text -mqtt-host localhost --input-port /dev/ttyUSB0 --input-speed 57600 --special-handling "stx=X etx=0x0d format=XQ" -t 1024`
 
 ## Command line switches
 
 switch|Required/Optional|argument|description
 ---|---|---|---
--T|REQUIRED|topic|mqtt topic
--m|REQUIRED|see above|protocol id 
--H|REQUIRED|qualified host|mqtt host operating mqtt server
--i|REQUIRED|full path to device|input serial port
--a|OPTIONAL|seconds|Terminate after seconds without data
--t|OPTIONAL|milliseconds|Timeout packet after milliseconds since start
--s|OPTIONAL|seconds|startup delay
--b|OPTIONAL|number|baud rate of serial port default is 4800
--v|OPTIONAL|(none)|sets verbose mode
--P|OPTIONAL|number|default is 1883
--M|OPTIONAL|single arg|See below
--h|OPTIONAL|(none)|displays help and exits
+--mqtt-topic|REQUIRED|topic|mqtt topic
+--mqtt-protocol|REQUIRED|see above|protocol id 
+--mqtt-host|REQUIRED|qualified host|mqtt host operating mqtt server
+--input-port|REQUIRED|full path to device|input serial port
+--alarm-no-data-after-start|OPTIONAL|seconds|Terminate after seconds without data
+--timeout|OPTIONAL|milliseconds|Timeout packet after milliseconds since start
+--sleep-before-startup|OPTIONAL|seconds|startup delay
+--input-speed|OPTIONAL|number|baud rate of serial port default is 4800
+--verbose|OPTIONAL|(none)|sets verbose mode
+--mqtt-port|OPTIONAL|number|default is 1883
+--special-handling|OPTIONAL|single arg|See below
+--quiet|OPTIONAL|(none)|turns off json packets sent to stdout
+--help|OPTIONAL|(none)|displays help and exits
 
 ## Mode or protocol special handling
 
 ### NMEA0183
 
-#### -M (options)
+#### --special-handling (options)
 
 arg|type |description
 ---|---|---
 stx|start of text|default='$'
 etx|end of text|default=newline
+format|format name|"NMEA"
+setTimeStartupCount|integer|number of time to set systime to GPS
+setTimeIntervalCount|integer|resync after integer packets RMC
 
 #### Example
 
--M "stx=$ etx=^m"
+--special-handling "stx=$ etx=^m"
 
 Visually this looks correct but special characters must be escaped to prevent the shell from
 mishandling.   In bash $ should be enterd stx=`'$'`   and newline should be entered as `control-M <enter>`.
@@ -73,7 +77,7 @@ mishandling.   In bash $ should be enterd stx=`'$'`   and newline should be ente
 
 ### text
 
-#### -M (options)
+#### --special-handling (options)
 
 arg|type |description
 ---|---|---
@@ -82,11 +86,11 @@ etx|end of text|default=newline
 
 #### Example
 
-`-M "stx=S etx=^m"`
+`--special-handling "stx=S etx=^m"`
 
        or
 
-`-M "stx=X etx=0x0d"`
+`--special-handling "stx=X etx=0x0d"`
 
 Visually this looks correct but special characters must be escaped to prevent the shell from
 mishandling.   In bash $ should be enterd stx=`'$'`   and newline should be entered as `control-M <enter>`.
@@ -98,7 +102,7 @@ As an easier alternative you can specify both stx and etx in hexidecimal.   Wher
 
 Command line in the lab looks like:
 
-` ./serToMQTT -T /toStation/A2744 -m text -H localhost -i /dev/ttyUSB0 -b 57600 -M "stx=X etx=0x0d format=XQ " -t 1280`
+` ./serToMQTT --mqtt-topic /toStation/A2744 --protocol text --mqtt-host localhost --input-port /dev/ttyUSB0 --input-speed 57600 --special-handling "stx=X etx=0x0d format=XQ " --timeout 1280`
 
 The critcal difference is specifying the stx and etx using the -M option and specifying the packet time out.   The time out by 
 default is 500 mSeconds.   This device seems to be sending packets once per second so the need for 1280 mSeconds.   This
@@ -108,7 +112,7 @@ was determined experimetally.
 
 Command line in the lab looks like:
 
-`./serToMQTT -m text -i /dev/ttyUSB1 -b 115200 -H localhost -T /toStation/A2744 -M format=TRI` 
+`./serToMQTT --protocol text --input-port /dev/ttyUSB1 --input-speed 115200 --mqtt-host localhost --mqtt-topic /toStation/A2744 --special-handling format=TRI` 
 
 The defaults of stx='S' and etx=0x0a are used, and need not be specified.
 
@@ -116,7 +120,7 @@ The defaults of stx='S' and etx=0x0a are used, and need not be specified.
 
 Command line in the lab looks like:
 
-`./serToMQTT -T /toStation/A2744 -m nmea0183 -H localhost -i /dev/ttyUSB2 -b 4800 -M format=NMEA`
+`./serToMQTT --mqtt-topic /toStation/A2744 --protocol nmea0183 --mqtt-host localhost --input-port /dev/ttyUSB2 --input-speed 4800 --special-handling format=NMEA`
 
 The defaults of stx='$' and etx=newline are used, and need not be specified.
 

@@ -32,6 +32,7 @@ static char mqtt_host[256];
 static char mqtt_topic[256];
 static struct mosquitto *mosq;
 static int disable_mqtt_output;
+static int quiet_flag;
 
 static void _mosquitto_shutdown(void);
 
@@ -310,6 +311,10 @@ static void _mosquitto_shutdown(void) {
 }
 int serToMQTT_pub(const char *message ) {
 	int rc = 0;
+	if ( 0 == quiet_flag ) {
+		fputs(message,stdout);
+		fflush(stdout);
+	}
 	
 	if ( 0 == disable_mqtt_output ) {
 
@@ -338,14 +343,27 @@ int serToMQTT_pub(const char *message ) {
 		} else {
 			fprintf(stderr,"# mosquitto unknown error = %d\n",rc);
 		}
-	} else {
-		fputs(message,stdout);
-		fflush(stdout);
 	}
 
 
 	return	rc;
 }
+enum arguments {
+	A_protocol = 512,
+	A_input_port,
+	A_input_speed,
+	A_special_handling,
+	A_disable_mqtt,
+	A_mqtt_host,
+	A_mqtt_topic,
+	A_mqtt_port,
+	A_timeout,
+	A_alarm_no_data_after_start,
+	A_sleep_before_startup,
+	A_quiet,
+	A_verbose,
+	A_help,
+};
 
 int main(int argc, char **argv) {
 	char portname[128] = "/dev/ttyAMA0";
@@ -360,15 +378,24 @@ int main(int argc, char **argv) {
 		int option_index = 0;
 		static struct option long_options[] = {
 			/* normal program */
-		        {"help",                             no_argument,       0, 'h' },
-		        {"stdout",                           no_argument,       0, 'N' },
-		        {"protocol",                         1,                 0, 'm' },
-		        {"special-handling",                 1,                 0, 'M' },
-		        {"mqtt-host",                        1,                 0, 'H' },
+		        {"protocol",                         1,                 0, A_protocol },
+		        {"input-port",                       1,                 0, A_input_port },
+		        {"input-speed",                      1,                 0, A_input_speed },
+		        {"special-handling",                 1,                 0, A_special_handling },
+		        {"mqtt-host",                        1,                 0, A_mqtt_host },
+		        {"mqtt-topic",                       1,                 0, A_mqtt_topic },
+		        {"mqtt-port",                        1,                 0, A_mqtt_port },
+		        {"timeout",                          1,                 0, A_timeout },
+		        {"alarm-no-data-after-start",        1,                 0, A_alarm_no_data_after_start },
+		        {"sleep-before-startup",             1,                 0, A_sleep_before_startup },
+			{"disable-mqtt",                     no_argument,       0, A_disable_mqtt },
+			{"quiet",                            no_argument,       0, A_quiet, },
+			{"verbose",                          no_argument,       0, A_verbose, },
+		        {"help",                             no_argument,       0, A_help, },
 			{},
 		};
 
-		n = getopt_long(argc, argv, "a:b:hi:s:vt:m:M:H:P:T:", long_options, &option_index);
+		n = getopt_long(argc, argv, "", long_options, &option_index);
 
 		if (n == -1) {
 			break;
@@ -377,36 +404,36 @@ int main(int argc, char **argv) {
 
 	/* command line arguments */
 		switch (n) {
-			case 'N':
+			case A_disable_mqtt:
 				disable_mqtt_output = 1;
 				break;
-			case 'T':	
+			case A_mqtt_topic:	
 				strncpy(mqtt_topic,optarg,sizeof(mqtt_topic));
 				break;
-			case 'H':	
+			case A_mqtt_host:	
 				strncpy(mqtt_host,optarg,sizeof(mqtt_host));
 				break;
-			case 'P':
+			case A_mqtt_port:
 				mqtt_port = atoi(optarg);
 				break;
-			case 'b':
+			case A_input_speed:
 				_do_speed(&_baud,optarg);
 				break;
-			case 'M':	/* overRide mode paraments */
+			case A_special_handling:	/* overRide mode paraments */
 				_M = strsave(optarg);
 				break;
-			case 'm':	/* set the mode of operation */
+			case A_protocol:	/* set the mode of operation */
 				set_mode(&_mode,optarg);
 				break;
-			case 't':
+			case A_timeout:
 				milliseconds_timeout=atoi(optarg);
 				fprintf(stdout,"# timeout packet after %d milliseconds since start\n",milliseconds_timeout);
 				break;
-			case 'a':
+			case A_alarm_no_data_after_start:
 				alarmSeconds=atoi(optarg);
 				fprintf(stdout,"# terminate program after %d seconds without receiving data\n",alarmSeconds);
 				break;
-			case 's':
+			case A_sleep_before_startup:
 				n=atoi(optarg);
 				fprintf(stdout,"# Delaying startup for %d seconds ",n);
 				fflush(stdout);
@@ -418,52 +445,53 @@ int main(int argc, char **argv) {
 				fprintf(stdout," done\n");
 				fflush(stdout);
 				break;
-			case 'i':
+			case A_input_port:
 				strncpy(portname,optarg,sizeof(portname));
 				portname[sizeof(portname)-1]='\0';
 				fprintf(stderr,"# serial port = %s\n",portname);
 				break;
-			case 'v':
+			case A_verbose:
 				outputDebug=1;
 				fprintf(stderr,"# verbose (debugging) output to stderr enabled\n");
 				break;
-			case 'h':
-				fprintf(stdout,"# --stdout\t\tdisable mqtt and substitue stdout\n");
-				fprintf(stdout,"# -M\t\t\tmode or protocol special handling\n");
-				fprintf(stdout,"# --special-handing\t=mode or protocol special handling\n");
-				fprintf(stdout,"# -T\t\t\tmqtt topic\n");
-				fprintf(stdout,"# -H\t\t\tmqtt host\n");
-				fprintf(stdout,"# -p\t\t\tmqtt port\n");
-				fprintf(stdout,"# -m\t\t\tprotocol\n");
-				fprintf(stdout,"# --protocol\t\t=protocol\n");
-				fprintf(stdout,"# -a\t\t\tseconds\tTerminate after seconds without data\n");
-				fprintf(stdout,"# -t\t\t\tmilliseconds\tTimeout packet after milliseconds since start\n");
-				fprintf(stdout,"# -s\t\t\tseconds\tstartup delay\n");
-				fprintf(stdout,"# -v\t\t\tOutput verbose / debugging to stderr\n");
-				fprintf(stdout,"# -i\t\t\tserial device to use (default: /dev/ttyAMA0)\n");
-				fprintf(stdout,"# -b\t\t\tserial baud to use (default: 4800)\n");
+			case A_quiet:
+				quiet_flag = 1;
+				fprintf(stderr,"# quiet no output packets to standard out\n");
+				break;
+			case A_help:
+				fprintf(stdout,"# --disable-mqtt\t\tdisable mqtt output\n");
+				fprintf(stdout,"# --special-handing\t\tmode or protocol special handling\n");
+				fprintf(stdout,"# --mqtt-topic\t\t\tmqtt topic\n");
+				fprintf(stdout,"# --mqtt-host\t\t\tmqtt host\n");
+				fprintf(stdout,"# --mqtt-port\t\t\tmqtt port(optional)\n");
+				fprintf(stdout,"# --protocol\t\t\tprotocol\n");
+				fprintf(stdout,"# --alarm-no-data-after-start\tseconds\tTerminate after seconds without data\n");
+				fprintf(stdout,"# --timeout\t\t\tmilliseconds\tTimeout packet after milliseconds since start\n");
+				fprintf(stdout,"# --sleep-before-startup\tseconds\tstartup delay\n");
+				fprintf(stdout,"# --verbose\t\t\tOutput verbose / debugging to stderr\n");
+				fprintf(stdout,"# --input-port\t\t\tserial device to use (default: /dev/ttyAMA0)\n");
+				fprintf(stdout,"# --input-speed\t\t\tserial baud to use (default: 4800)\n");
 				fprintf(stdout,"#\n");
-				fprintf(stdout,"# -h\t\t\tThis help message then exit\n");
-				fprintf(stdout,"# --help\t\tThis help message then exit\n");
+				fprintf(stdout,"# --help\t\t\tThis help message then exit\n");
 				fprintf(stdout,"#\n");
 				exit(0);
 		}
 	}
 	if ( 0 == _mode ) { 
-		fputs("# -m is missing and is required.\n",stderr); 
+		fputs("# --protocol is missing and is required.\n",stderr); 
 		exit(1); 
 	}
 	if ( 0 == disable_mqtt_output && ' ' >= mqtt_host[0] ) { 
-		fputs("# <-H mqtt_host>	\n",stderr); 
+		fputs("# <--mqtt-host is requied when outputting to mqtt>\n",stderr); 
 		exit(1); 
 	} else {
-		fprintf(stderr,"# mqtt_host=%s\n",mqtt_host);
+		fprintf(stderr,"# --mqtt_host=%s\n",mqtt_host);
 	}
 	if ( 0 == disable_mqtt_output && ' ' >= mqtt_topic[0] ) { 
-		fputs("# <-T mqtt_topic>	\n",stderr); 
+		fputs("# <--mqtt_topic> is required  when outputting to mqtt\n",stderr); 
 		exit(1); 
 	} else {
-		fprintf(stderr,"# mqtt_topic=%s\n",mqtt_topic);
+		fprintf(stderr,"# --mqtt_topic=%s\n",mqtt_topic);
 	}
 
 	if ( 0 == disable_mqtt_output && 0 == _mosquitto_startup() ) {
