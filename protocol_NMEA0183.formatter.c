@@ -48,9 +48,14 @@ struct json_object * json_object_new_satelite(int svid,int elv,int az,int cno) {
 }
 struct json_object *_longitude_latitude(int mode, int degrees,double minutes,char *flag){
 	struct json_object *jobj;
+	double decimalDegrees;
 	jobj = json_object_new_object();
 	json_object_object_add(jobj,"degrees",json_object_new_int(degrees));
 	json_object_object_add(jobj,"minutes",json_object_new_double(minutes));
+	decimalDegrees = 5.0 * minutes;
+	decimalDegrees /= 300.0;
+	decimalDegrees += (double) degrees;
+	json_object_object_add(jobj,"decimalDegrees",json_object_new_double(decimalDegrees));
 	json_object_object_add(jobj,( 0 == mode ) ? "NS" : "EW",json_object_new_string(flag));
 
 
