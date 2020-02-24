@@ -49,7 +49,7 @@ switch|Required/Optional|argument|description
 --verbose|OPTIONAL|(none)|sets verbose mode
 --mqtt-port|OPTIONAL|number|default is 1883
 --special-handling|OPTIONAL|single arg|See below
-----disable-mqtt|OPTIONAL|(none)|prevents mqtt pyblishing
+----disable-mqtt|OPTIONAL|(none)|prevents mqtt publishing
 --quiet|OPTIONAL|(none)|turns off json packets sent to stdout
 --help|OPTIONAL|(none)|displays help and exits
 
