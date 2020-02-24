@@ -18,3 +18,6 @@ protocol_NMEA0183.o: protocol_NMEA0183.c serToMQTT.h \
 
 setDateTimeFromGPS.o: setDateTimeFromGPS.c 
 	$(CC)  -c setDateTimeFromGPS.c  $(CFLAGS) -I/usr/include/json-c/
+
+backToJson: backToJson.c
+	$(CC) backToJson.c  -o backToJson $(CFLAGS)  -lm -ljson-c -lmosquitto -I/usr/include/json-c/

@@ -70,7 +70,7 @@ static struct json_object * _VTG( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageTtpe",json_object_new_string(p));
+	json_object_object_add(jobj,"messageType",json_object_new_string(p));
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -150,7 +150,7 @@ static struct json_object * _GGA( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageTtpe",json_object_new_string(p));
+	json_object_object_add(jobj,"messageType",json_object_new_string(p));
 	
 	p = strsep(&q,",");
 	if ( 0 == p ) {
@@ -252,7 +252,7 @@ static struct json_object * _GSA( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageTtpe",json_object_new_string(p));
+	json_object_object_add(jobj,"messageType",json_object_new_string(p));
 	
 	p = strsep(&q,",");
 	if ( 0 == p ) {
@@ -322,7 +322,7 @@ static struct json_object * _GLL( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageTtpe",json_object_new_string(p));
+	json_object_object_add(jobj,"messageType",json_object_new_string(p));
 	
 	p = strsep(&q,",");
 	if ( 0 == p ) {
@@ -390,7 +390,7 @@ static struct json_object * _RMC( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageTtpe",json_object_new_string(p));
+	json_object_object_add(jobj,"messageType",json_object_new_string(p));
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -479,7 +479,7 @@ static struct json_object * _GSV( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageTtpe",json_object_new_string(p));
+	json_object_object_add(jobj,"messageType",json_object_new_string(p));
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -551,7 +551,7 @@ static struct json_object * _GST( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageTtpe",json_object_new_string(p));
+	json_object_object_add(jobj,"messageType",json_object_new_string(p));
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -623,7 +623,7 @@ static struct json_object * _HDT( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageTtpe",json_object_new_string(p));
+	json_object_object_add(jobj,"messageType",json_object_new_string(p));
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -648,7 +648,7 @@ static struct json_object * _ROT( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageTtpe",json_object_new_string(p));
+	json_object_object_add(jobj,"messageType",json_object_new_string(p));
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -680,7 +680,7 @@ static struct json_object * _HPR( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageTtpe",json_object_new_string(p));
+	json_object_object_add(jobj,"messageType",json_object_new_string(p));
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
