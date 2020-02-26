@@ -140,6 +140,163 @@ static struct json_object * _VTG( char *s ) {
 	parse_failed:
 	return jobj;
 }
+static struct json_object * _ZDA( char *s ) {
+	struct json_object *jobj;
+	char buffer[256];
+	char	timestamp[32];
+	char	datestamp[32];
+	int	mm,dd,yyyy;
+	char *p,*q;
+	jobj = json_object_new_object();
+
+	strncpy(buffer,s,sizeof(buffer));
+	q = buffer;
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	snprintf(timestamp,sizeof(timestamp),"%2.2s:%2.2s:%s",p,p+2,p+4);
+	json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	dd = atoi(p);
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	mm = atoi(p);
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	yyyy = atoi(p);
+	snprintf(datestamp,sizeof(datestamp),"%02d-%02d-%04d",mm,dd,yyyy);
+	json_object_object_add(jobj,"date",json_object_new_string(datestamp));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"localZoneHours",json_int_division(atoi(p),"local TZ offset","hours"));
+	p = strsep(&q,",*");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"localZoneMinutes",json_int_division(atoi(p),"local TZ offset","minutes"));
+
+
+
+
+	parse_failed:
+	return jobj;
+}
+static struct json_object * _GNS( char *s ) {
+	struct json_object *jobj;
+	char buffer[256];
+	char	timestamp[32];
+	char *p,*q;
+	int degrees;
+	double minutes,value;
+	jobj = json_object_new_object();
+
+	strncpy(buffer,s,sizeof(buffer));
+	q = buffer;
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	snprintf(timestamp,sizeof(timestamp),"%2.2s:%2.2s:%s",p,p+2,p+4);
+	json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	/* first 2 bytes is degrees N-S  0-90,  remainder of string is minutes */
+	degrees = atoi(p) / 100;
+	minutes = atof(p+3);
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"latitude",_longitude_latitude(0,degrees,minutes,p));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	/* first 3 bytes is degrees E-W  0-180,  remainder of string is minutes */
+	degrees = atoi(p) / 100;
+	minutes = atof(p+3);
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"longitude",_longitude_latitude(1,degrees,minutes,p));
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"mode",json_object_new_string(p));
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"satCount",json_object_new_int(atoi(p)));
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"HDOP",json_division(atof(p),"horizontal dilution of precision","unknown"));
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	value = atof(p);
+	json_object_object_add(jobj,"antennaAlt",json_division(value,"antenna altitude","meters")); /* a.a */
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	value = atof(p);
+	json_object_object_add(jobj,"geodialSep",json_division(value,"geodial separation","meters"));	/*g.g */
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"ageDiff",json_int_division(atoi(p),"age of differential correction","seconds"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"diffID",json_object_new_int(atoi(p)));
+	p = strsep(&q,",*");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"navStatus",json_object_new_string(p));
+
+
+	parse_failed:
+	return jobj;
+}
 static struct json_object * _GGA( char *s ) {
 	struct json_object *jobj;
 	char buffer[256];
@@ -717,6 +874,53 @@ static struct json_object * _HPR( char *s ) {
 	parse_failed:
 	return jobj;
 }
+static struct json_object * _PSAT( char *s ) {
+	struct json_object *jobj;
+	char buffer[256];
+	char *p,*q;
+	double value;
+	jobj = json_object_new_object();
+	strncpy(buffer,s,sizeof(buffer));
+
+	q = buffer;
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"antennaID",json_object_new_string(p));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"manuallyEnteredSeparation",json_object_new_double(atof(p)));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"autoGPSantennaSeparation",json_object_new_double(atof(p)));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	value = atof(p);
+	json_object_object_add(jobj,"currHD", 
+		( '\0' == p[0] ) ? NULL :json_division( value ,"current heading true", "degrees"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"headingDevice", 
+		( '\0' == p[0] ) ? NULL :json_string_division( p ,"N=GNSS, G=Gyro", ""));
+
+	/* this to be implemented pitch, roll and antenna placement */
+	parse_failed:
+	return jobj;
+}
 static struct json_object *do_NMEA0183_FORMAT(char *s) {
 	struct json_object *jobj;
 	jobj = json_object_new_object();
@@ -745,6 +949,12 @@ static struct json_object *do_NMEA0183_FORMAT(char *s) {
 		 json_object_object_add(jobj,"currentHeading",_ROT(s));	
 	} else if ( 0 == strncmp("HPR",s+3,3)) {
 		 json_object_object_add(jobj,"headingPitchRoll",_HPR(s));	
+	} else if ( 0 == strncmp("GNS",s+3,3)) {
+		 json_object_object_add(jobj,"GNSMessage",_GNS(s));	
+	} else if ( 0 == strncmp("ZDA",s+3,3)) {
+		 json_object_object_add(jobj,"timeDateUTC",_ZDA(s));	
+	} else if ( 0 == strncmp("PSAT",s+1,4)) {
+		 json_object_object_add(jobj,"secondaryAntenna",_PSAT(s));	
 	}
 	return	jobj;
 }
