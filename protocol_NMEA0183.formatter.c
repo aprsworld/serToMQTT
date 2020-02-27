@@ -1,4 +1,4 @@
-
+/* see https://www.hemispheregnss.com/wp-content/uploads/2020/02/hemispheregnss_technicalreferencemanual_v3.0_12302019.pdf */
 static int _nmea_checksum(const char *s) {
     int c = 0;
 
@@ -194,6 +194,29 @@ static struct json_object * _ZDA( char *s ) {
 
 
 
+	parse_failed:
+	return jobj;
+}
+static struct json_object * _HEV( char *s ) {
+	struct json_object *jobj;
+	char buffer[256];
+	char *p,*q;
+	jobj = json_object_new_object();
+
+	strncpy(buffer,s,sizeof(buffer));
+	q = buffer;
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	
+	p = strsep(&q,",*");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"Heave",
+		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"heave", "meters"));
 	parse_failed:
 	return jobj;
 }
@@ -917,7 +940,139 @@ static struct json_object * _PSAT( char *s ) {
 	json_object_object_add(jobj,"headingDevice", 
 		( '\0' == p[0] ) ? NULL :json_string_division( p ,"N=GNSS, G=Gyro", ""));
 
-	/* this to be implemented pitch, roll and antenna placement */
+	p = strsep(&q,",*");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"pitch", 
+		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"Pitch", "degrees"));
+	p = strsep(&q,",*");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"roll", 
+		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"Roll", "degrees"));
+	p = strsep(&q,",*");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"antennaPlacement", 
+		( '\0' == p[0] ) ? NULL :json_string_division( p ,"P=front to bank,  R=left to right", "degrees"));
+	p = strsep(&q,",*");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"satCount", 
+		( '\0' == p[0] ) ? NULL :json_int_division( atoi(p) ,"Satelite count", "integer"));
+	p = strsep(&q,",*");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"satUsed", 
+		( '\0' == p[0] ) ? NULL :json_int_division( atoi(p) ,"Satelites used by secondary antenna", "integer"));
+
+	/* there are other paraments but seem to be unimplemented by device makers */
+	parse_failed:
+	return jobj;
+}
+static struct json_object * _NOTFOUND( char *s ) {
+	struct json_object *jobj;
+	char buffer[256];
+	char *p,*q;
+	jobj = json_object_new_object();
+	strncpy(buffer,s,sizeof(buffer));
+
+	q = buffer;
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	parse_failed:
+	return jobj;
+}
+static struct json_object * _PASHR( char *s ) {
+	struct json_object *jobj;
+	char buffer[256];
+	char *p,*q;
+	char timestamp[32];
+	jobj = json_object_new_object();
+	strncpy(buffer,s,sizeof(buffer));
+
+	q = buffer;
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	snprintf(timestamp,sizeof(timestamp),"%2.2s:%2.2s:%s",p,p+2,p+4);
+	json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"trueHeading", 
+		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"true heading", "decimalDegrees"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	if ( '\0' != p[0] && 'T' != p[0] ) {
+		json_object_object_add(jobj,"headingType",json_object_new_string("unknown"));
+	}
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"Roll",
+		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"roll", "decimalDegrees"));
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"Ptich",
+		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"pitch", "decimalDegrees"));
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"Heave",
+		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"heave", "meters"));
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"rollDeviation",
+		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"roll standard deviation", "decimalDegrees"));
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"pitchDeviation",
+		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"pitch standard deviation", "decimalDegrees"));
+
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"heaveDeviation",
+		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"heave standard deviation", "meters"));
+
+	p = strsep(&q,",*");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"qualityFlag",
+		( '\0' == p[0] ) ? NULL :json_int_division( atoi(p) ,"0=No position, 1=All non-RTK fixed integer postions " \
+		"2=RTK fixed integer positions", "integer flag"));
 	parse_failed:
 	return jobj;
 }
@@ -953,8 +1108,14 @@ static struct json_object *do_NMEA0183_FORMAT(char *s) {
 		 json_object_object_add(jobj,"GNSMessage",_GNS(s));	
 	} else if ( 0 == strncmp("ZDA",s+3,3)) {
 		 json_object_object_add(jobj,"timeDateUTC",_ZDA(s));	
+	} else if ( 0 == strncmp("HEV",s+3,3)) {
+		 json_object_object_add(jobj,"heave",_HEV(s));	
 	} else if ( 0 == strncmp("PSAT",s+1,4)) {
 		 json_object_object_add(jobj,"secondaryAntenna",_PSAT(s));	
+	} else if ( 0 == strncmp("PASHR",s+1,5)) {
+		 json_object_object_add(jobj,"trueHeadingHeavePitchRold",_PASHR(s));	
+	} else {
+		 json_object_object_add(jobj,"notFound",_NOTFOUND(s));	
 	}
 	return	jobj;
 }

@@ -84,7 +84,7 @@ json_object *json_object_new_dateTime(void) {
 
 }
 void connect_callback(struct mosquitto *mosq, void *obj, int result) {
-	printf("# connect_callback, rc=%d\n", result);
+	fprintf(stderr,"# connect_callback, rc=%d\n", result);
 }
 
 static void signal_handler(int signum) {
