@@ -101,6 +101,7 @@
 #include <unistd.h>
 #include <string.h>
 #include <json.h>
+#include <json_tokener.h>
 #include "serToMQTT.h"
 
 /* turn this pseudo json back into a read json array */
@@ -122,36 +123,72 @@ struct json_object *json_division(double value,char *description, char *units) {
 
 
 #include "protocol_NMEA0183.formatter.c"
-void _process( char *s ) {
+struct json_object * _process( const char *s ) {
+#if 0
 	char *s_end = strrchr(s,'"');
 	s = strchr(s,':');
 	s = strchr(s,'"');
 	s++;
 	s_end[0] = '\0';
-	struct json_object * jobj = do_NMEA0183_FORMAT(s);
-	fputs(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY),stdout);
-	json_object_put(jobj);
+#endif
+	char	buffer[256];
+	strncpy(buffer,s,sizeof(buffer));
+	struct json_object * jobj = do_NMEA0183_FORMAT(buffer);
+	return	jobj;
 
 }
+json_object *parse_a_string(char *string ) {
+
+	json_object *jobj = NULL;
+	json_tokener *tok = json_tokener_new();
+	const char *mystring = string;
+	int stringlen = 0;
+	enum json_tokener_error jerr;
+	do {
+		stringlen = strlen(mystring);
+		jobj = json_tokener_parse_ex(tok, mystring, stringlen);
+	} while ((jerr = json_tokener_get_error(tok)) == json_tokener_continue);
+	if (jerr != json_tokener_success) {
+		fprintf(stderr, "Error: %s\n", json_tokener_error_desc(jerr));
+		// Handle errors, as appropriate for your application.
+	}
+	if (tok->char_offset < stringlen) {
+		// Handle extra characters after parsed object as desired.
+		// e.g. issue an error, parse another object from that point, etc...
+	}
+	return	jobj;
+}
+
 char	buffer[256];
-int main( int argc, char **argv ) {
-	int	len;
+char	input_string[512];
+int main ( int argc, char **argv ) {
 
-	fputs("{ [",stdout);
-
+	char *p;
 	while ( fgets(buffer,sizeof(buffer),stdin)) {
+		int len;
 		len = strlen(buffer);
-		if ( 1 < len ) {
-			fputs(buffer,stdout);
-		} else {
-			fputs(",\n",stdout);
+		if ( 0 != ( p = strchr(buffer,'{')) ){
+			strncpy(input_string,p,sizeof(input_string));
+		} else  {
+			strcat(input_string,buffer);
 		}
-		if ( 0 != strstr(buffer,"rawData") ) {
-			_process(buffer);
+		if (  0 != ( p = strchr(buffer,'}')) ){ 
+			json_object *jobj = parse_a_string(input_string);
+			if ( 0 != jobj ) {
+				const char	*string = json_object_get_string(json_object_object_get(jobj,"rawData"));
+				json_object * formatted = _process(string);
+				if ( 0 != formatted ) {
+					json_object_object_add(jobj,"formattedData",formatted);
+				}
+				fputs(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY),stdout);
+				json_object_put(jobj);
+				fputc('\n',stdout);
+				fputc('\n',stdout);
+			}
 		}
 	}
-	fputs("] }\n",stdout);
-	fflush(stdout);
-	
-return	0;
+				
+	return	0;
 }
+
+
