@@ -175,10 +175,16 @@ int main ( int argc, char **argv ) {
 		if (  0 != ( p = strchr(buffer,'}')) ){ 
 			json_object *jobj = parse_a_string(input_string);
 			if ( 0 != jobj ) {
-				const char	*string = json_object_get_string(json_object_object_get(jobj,"rawData"));
-				json_object * formatted = _process(string);
-				if ( 0 != formatted ) {
-					json_object_object_add(jobj,"formattedData",formatted);
+				json_object *tmp;
+				const char	*string = 0;
+				if ( 0 == json_object_object_get_ex(jobj,"rawData",&tmp)) {
+					string = json_object_get_string(tmp);
+				}
+				if ( 0 != string ) {
+					json_object * formatted = _process(string);
+					if ( 0 != formatted ) {
+						json_object_object_add(jobj,"formattedData",formatted);
+					}
 				}
 				fputs(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY),stdout);
 				json_object_put(jobj);

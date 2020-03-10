@@ -30,6 +30,7 @@
 static int mqtt_port=1883;
 static char mqtt_host[256];
 static char mqtt_topic[256];
+static char *mqtt_user_name,*mqtt_passwd;
 static struct mosquitto *mosq;
 static int disable_mqtt_output;
 static int quiet_flag;
@@ -84,6 +85,9 @@ json_object *json_object_new_dateTime(void) {
 
 }
 void connect_callback(struct mosquitto *mosq, void *obj, int result) {
+	if ( 5 == result ) {
+		fprintf(stderr,"# --mqtt-user-name and --mqtt-passwd required at this site.\n");
+	}
 	fprintf(stderr,"# connect_callback, rc=%d\n", result);
 }
 
@@ -281,6 +285,9 @@ static struct mosquitto * _mosquitto_startup(void) {
 	mosq = mosquitto_new(clientid, true, 0);
 
 	if (mosq) {
+		if ( 0 != mosq,mqtt_user_name && 0 != mqtt_passwd ) {
+			mosquitto_username_pw_set(mosq,mqtt_user_name,mqtt_passwd);
+		}
 		mosquitto_connect_callback_set(mosq, connect_callback);
 
 		fprintf(stderr,"# connecting to MQTT server %s:%d\n",mqtt_host,mqtt_port);
@@ -357,6 +364,8 @@ enum arguments {
 	A_mqtt_host,
 	A_mqtt_topic,
 	A_mqtt_port,
+	A_mqtt_user_name,
+	A_mqtt_password,
 	A_timeout,
 	A_alarm_no_data_after_start,
 	A_sleep_before_startup,
@@ -385,6 +394,8 @@ int main(int argc, char **argv) {
 		        {"mqtt-host",                        1,                 0, A_mqtt_host },
 		        {"mqtt-topic",                       1,                 0, A_mqtt_topic },
 		        {"mqtt-port",                        1,                 0, A_mqtt_port },
+		        {"mqtt-user-name",                   1,                 0, A_mqtt_user_name },
+		        {"mqtt-passwd",                      1,                 0, A_mqtt_password },
 		        {"timeout",                          1,                 0, A_timeout },
 		        {"alarm-no-data-after-start",        1,                 0, A_alarm_no_data_after_start },
 		        {"sleep-before-startup",             1,                 0, A_sleep_before_startup },
@@ -415,6 +426,12 @@ int main(int argc, char **argv) {
 				break;
 			case A_mqtt_port:
 				mqtt_port = atoi(optarg);
+				break;
+			case A_mqtt_user_name:
+				mqtt_user_name = strsave(optarg);
+				break;
+			case A_mqtt_password:
+				mqtt_passwd = strsave(optarg);
 				break;
 			case A_input_speed:
 				_do_speed(&_baud,optarg);
@@ -464,6 +481,8 @@ int main(int argc, char **argv) {
 				fprintf(stdout,"# --mqtt-topic\t\t\tmqtt topic\n");
 				fprintf(stdout,"# --mqtt-host\t\t\tmqtt host\n");
 				fprintf(stdout,"# --mqtt-port\t\t\tmqtt port(optional)\n");
+				fprintf(stdout,"# --mqtt-user-name\t\t\tmaybe required depending on system\n");
+				fprintf(stdout,"# --mqtt-passwd\t\t\tmaybe required depending on system\n");
 				fprintf(stdout,"# --protocol\t\t\tprotocol\n");
 				fprintf(stdout,"# --alarm-no-data-after-start\tseconds\tTerminate after seconds without data\n");
 				fprintf(stdout,"# --timeout\t\t\tmilliseconds\tTimeout packet after milliseconds since start\n");
