@@ -26,10 +26,6 @@
 #include <json.h>
 #include "serToMQTT.h"
 
-extern   void set_blocking (int fd, int vmin, int vtime) ;
-
-extern int serToMQTT_pub(const char *message );
-
 static int local_stx = 'S';
 static int local_etx = '\n';
 
@@ -107,7 +103,7 @@ static int text_packet_processor(char *packet, int length, uint64_t microtime_st
 		}
 	}
 			
-	rc =  serToMQTT_pub(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
+	rc =  serToMQTT_pub(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY),mqtt_topic);
 	json_object_put(jobj);
 	if ( 0 != tmp ) {
 		json_object_put(tmp);

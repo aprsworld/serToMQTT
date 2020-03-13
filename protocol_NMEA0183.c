@@ -24,9 +24,8 @@
 #include <string.h>
 #include <json.h>
 #include "serToMQTT.h"
+#include <ctype.h>
 
-extern   void set_blocking (int fd, int vmin, int vtime) ;
-extern int serToMQTT_pub(const char *message );
 
 static int local_stx = '$';
 static int local_etx = '\n';
@@ -62,11 +61,33 @@ struct_data_block data_block[DATA_BLOCK_N];
 #include "protocol_NMEA0183.formatter.c"
 
 
+static const char * _new_NMEA_topic(const char *packet,const char *topic ) {
+	/* takes command-line topic (--mqtt-topic) and appends the NMEA sentence type */
+	static char buffer[256];
+	char topic_buffer[256] = {};
+	char	*p = 0, *q = 0;
+
+	strncpy(buffer,topic,sizeof(buffer) -1 );
+	strcat(buffer,"/");
+	strncpy(topic_buffer,topic,sizeof(topic_buffer) - 1);
+	p = strchr(topic_buffer,'$');
+	if ( 0 != p ) {
+		p++;
+		for ( q = p; 0 != isalpha(q[0]) ; q++) {
+		}
+		q [0] = '\0';
+		strcat(buffer,p);
+	}
+	
+
+return ( 0 != p && 0 != q )	? buffer : topic;
+} 
 
 int nmea_packet_processor(char *packet, int length, uint64_t microtime_start, int millisec_since_start) {
 	int rc = 0;
 	int i;
 	int lChecksum,rChecksum;
+	const char	*topic;
 
 	/* quick sanity check */
 	if ( length < 9 )
@@ -110,9 +131,12 @@ int nmea_packet_processor(char *packet, int length, uint64_t microtime_start, in
 	if ( 0 != _NMEA_FORMAT && 0 == no_meta ) {
 		json_object_object_add(jobj,"formattedData", do_NMEA0183_FORMAT(packet));
 	}
+	if ( 0 != _NMEA_FORMAT ) {
+		topic = _new_NMEA_topic(packet,mqtt_topic);
+	}
 
 	// fprintf(stderr,"# %s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
-	rc = serToMQTT_pub(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
+	rc = serToMQTT_pub(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY),topic);
 	json_object_put(jobj);
 
 	return	rc;

@@ -29,7 +29,7 @@
 
 static int mqtt_port=1883;
 static char mqtt_host[256];
-static char mqtt_topic[256];
+char mqtt_topic[256];
 static char *mqtt_user_name,*mqtt_passwd;
 static struct mosquitto *mosq;
 static int disable_mqtt_output;
@@ -317,7 +317,7 @@ static void _mosquitto_shutdown(void) {
 	fprintf(stderr,"# mosquitto_lib_cleanup()\n");
 	mosquitto_lib_cleanup();
 }
-int serToMQTT_pub(const char *message ) {
+int serToMQTT_pub(const char *message, const char *topic  ) {
 	int rc = 0;
 	if ( 0 == quiet_flag ) {
 		fputs(message,stdout);
@@ -328,7 +328,7 @@ int serToMQTT_pub(const char *message ) {
 
 		static int messageID;
 		/* instance, message ID pointer, topic, data length, data, qos, retain */
-		rc = mosquitto_publish(mosq, &messageID, mqtt_topic, strlen(message), message, 0, 0); 
+		rc = mosquitto_publish(mosq, &messageID, topic, strlen(message), message, 0, 0); 
 
 		if (0 != outputDebug) fprintf(stderr,"# mosquitto_publish provided messageID=%d and return code=%d\n",messageID,rc);
 
@@ -483,13 +483,13 @@ int main(int argc, char **argv) {
 				fprintf(stderr,"# quiet no output packets to standard out\n");
 				break;
 			case A_help:
-				fprintf(stdout,"# --no-meta\t\tdisable meta-data output\n");
+				fprintf(stdout,"# --no-meta\t\t\tdisable meta-data output\n");
 				fprintf(stdout,"# --disable-mqtt\t\tdisable mqtt output\n");
 				fprintf(stdout,"# --special-handing\t\tmode or protocol special handling\n");
 				fprintf(stdout,"# --mqtt-topic\t\t\tmqtt topic\n");
 				fprintf(stdout,"# --mqtt-host\t\t\tmqtt host\n");
 				fprintf(stdout,"# --mqtt-port\t\t\tmqtt port(optional)\n");
-				fprintf(stdout,"# --mqtt-user-name\t\t\tmaybe required depending on system\n");
+				fprintf(stdout,"# --mqtt-user-name\t\tmaybe required depending on system\n");
 				fprintf(stdout,"# --mqtt-passwd\t\t\tmaybe required depending on system\n");
 				fprintf(stdout,"# --protocol\t\t\tprotocol\n");
 				fprintf(stdout,"# --alarm-no-data-after-start\tseconds\tTerminate after seconds without data\n");
