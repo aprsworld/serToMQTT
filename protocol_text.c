@@ -88,29 +88,25 @@ static int text_packet_processor(char *packet, int length, uint64_t microtime_st
 
 	jobj = json_object_new_object();
 	json_object_object_add(jobj,"date",json_object_new_dateTime());
-//	snprintf(buffer,sizeof(buffer),"%lu",microtime_start);
-//	json_object_object_add(jobj,"epochMicroseconds",json_object_new_string(buffer));
 	json_object_object_add(jobj,"milliSecondSinceStart",json_object_new_int(millisec_since_start));
 	json_object_object_add(jobj,"rawData",json_object_new_string(packet));
-	switch ( this_format ) {
-		case iMet_XQ2_FORMAT:
-			tmp = do_iMet_XQ2_FORMAT(packet);
-			if ( 0 != tmp ) {
-				json_object_object_add(jobj,"iMet_XQ2_FORMAT",tmp);
-			}
-			break;
-		case TRISONIC_MINI_FORMAT:
-			tmp = do_TRISONIC_MINI_FORMAT(packet);
-			if ( 0 != tmp ) {
-				json_object_object_add(jobj,"Trisonic_Mini_FORMAT",tmp);
-			}
-			break;
+	if ( 0 == no_meta ) {
+		switch ( this_format ) {
+			case iMet_XQ2_FORMAT:
+				tmp = do_iMet_XQ2_FORMAT(packet);
+				if ( 0 != tmp ) {
+					json_object_object_add(jobj,"iMet_XQ2_FORMAT",tmp);
+				}
+				break;
+			case TRISONIC_MINI_FORMAT:
+				tmp = do_TRISONIC_MINI_FORMAT(packet);
+				if ( 0 != tmp ) {
+					json_object_object_add(jobj,"Trisonic_Mini_FORMAT",tmp);
+				}
+				break;
+		}
 	}
 			
-
-
-	// fprintf(stderr,"# %s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
-	// fprintf(stdout,"%s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));	fflush(stdout);
 	rc =  serToMQTT_pub(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
 	json_object_put(jobj);
 	if ( 0 != tmp ) {

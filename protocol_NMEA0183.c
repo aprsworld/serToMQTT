@@ -107,7 +107,7 @@ int nmea_packet_processor(char *packet, int length, uint64_t microtime_start, in
 	json_object_object_add(jobj,"milliSecondSinceStart",json_object_new_int(millisec_since_start));
 	json_object_object_add(jobj,"rawData",json_object_new_string(packet));
 
-	if ( 0 != _NMEA_FORMAT ) {
+	if ( 0 != _NMEA_FORMAT && 0 == no_meta ) {
 		json_object_object_add(jobj,"formattedData", do_NMEA0183_FORMAT(packet));
 	}
 

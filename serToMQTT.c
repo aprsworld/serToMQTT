@@ -45,6 +45,7 @@ extern int optind, opterr, optopt;
 int outputDebug=0;
 int milliseconds_timeout=500;
 int alarmSeconds=5;
+int no_meta;
 
 typedef struct {
 	char *label;
@@ -366,6 +367,7 @@ enum arguments {
 	A_mqtt_port,
 	A_mqtt_user_name,
 	A_mqtt_password,
+	A_no_meta,
 	A_timeout,
 	A_alarm_no_data_after_start,
 	A_sleep_before_startup,
@@ -399,6 +401,7 @@ int main(int argc, char **argv) {
 		        {"timeout",                          1,                 0, A_timeout },
 		        {"alarm-no-data-after-start",        1,                 0, A_alarm_no_data_after_start },
 		        {"sleep-before-startup",             1,                 0, A_sleep_before_startup },
+			{"no-meta",                          no_argument,       0, A_no_meta },
 			{"disable-mqtt",                     no_argument,       0, A_disable_mqtt },
 			{"quiet",                            no_argument,       0, A_quiet, },
 			{"verbose",                          no_argument,       0, A_verbose, },
@@ -415,6 +418,10 @@ int main(int argc, char **argv) {
 
 	/* command line arguments */
 		switch (n) {
+			case A_no_meta:
+				no_meta = 1;
+				fprintf(stderr,"# no meta-data to be output\n");
+				break;
 			case A_disable_mqtt:
 				disable_mqtt_output = 1;
 				break;
@@ -476,6 +483,7 @@ int main(int argc, char **argv) {
 				fprintf(stderr,"# quiet no output packets to standard out\n");
 				break;
 			case A_help:
+				fprintf(stdout,"# --no-meta\t\tdisable meta-data output\n");
 				fprintf(stdout,"# --disable-mqtt\t\tdisable mqtt output\n");
 				fprintf(stdout,"# --special-handing\t\tmode or protocol special handling\n");
 				fprintf(stdout,"# --mqtt-topic\t\t\tmqtt topic\n");
