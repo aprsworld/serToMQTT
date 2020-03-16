@@ -69,7 +69,7 @@ static const char * _new_NMEA_topic(const char *packet,const char *topic ) {
 
 	strncpy(buffer,topic,sizeof(buffer) -1 );
 	strcat(buffer,"/");
-	strncpy(topic_buffer,topic,sizeof(topic_buffer) - 1);
+	strncpy(topic_buffer,packet,sizeof(topic_buffer) - 1);
 	p = strchr(topic_buffer,'$');
 	if ( 0 != p ) {
 		p++;
