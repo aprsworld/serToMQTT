@@ -26,10 +26,12 @@
 #include <mosquitto.h>
 #include <time.h>
 #include "serToMQTT.h"
+#include <ctype.h>
 
 static int mqtt_port=1883;
 static char mqtt_host[256];
 char mqtt_topic[256];
+char mqtt_meta_topic[256];
 static char *mqtt_user_name,*mqtt_passwd;
 static struct mosquitto *mosq;
 static int disable_mqtt_output;
@@ -46,6 +48,7 @@ int outputDebug=0;
 int milliseconds_timeout=500;
 int alarmSeconds=5;
 int no_meta;
+int retainedFlag;
 
 typedef struct {
 	char *label;
@@ -61,8 +64,10 @@ uint64_t microtime() {
 struct json_object *json_division(double value,char *description, char *units) {
 	struct json_object *jobj = json_object_new_object();
 	json_object_object_add(jobj,"value",json_object_new_double(value));
-	json_object_object_add(jobj,"description",json_object_new_string(description));
-	json_object_object_add(jobj,"units",json_object_new_string(units));
+	if ( 0 == no_meta  || 0 != retainedFlag ) {
+		json_object_object_add(jobj,"description",json_object_new_string(description));
+		json_object_object_add(jobj,"units",json_object_new_string(units));
+	}
 	return	jobj;
 }
 
@@ -317,6 +322,28 @@ static void _mosquitto_shutdown(void) {
 	fprintf(stderr,"# mosquitto_lib_cleanup()\n");
 	mosquitto_lib_cleanup();
 }
+const char * new_topic(const char *packet,const char *topic ) {
+	
+	static char buffer[256];
+	char topic_buffer[256] = {};
+	char	*p = 0, *q = 0;
+
+	strncpy(buffer,topic,sizeof(buffer) -1 );
+	strcat(buffer,"/");
+	strncpy(topic_buffer,packet,sizeof(topic_buffer) - 1);
+	p = strchr(topic_buffer,'$');
+	if ( 0 != p ) {
+		p++;
+		for ( q = p; 0 != isalpha(q[0]) ; q++) {
+		}
+		q [0] = '\0';
+		strcat(buffer,p);
+	}
+	
+
+return ( 0 != p && 0 != q )	? buffer : topic;
+} 
+
 int serToMQTT_pub(const char *message, const char *topic  ) {
 	int rc = 0;
 	if ( 0 == quiet_flag ) {
@@ -329,6 +356,12 @@ int serToMQTT_pub(const char *message, const char *topic  ) {
 		static int messageID;
 		/* instance, message ID pointer, topic, data length, data, qos, retain */
 		rc = mosquitto_publish(mosq, &messageID, topic, strlen(message), message, 0, 0); 
+		if ( '\0' != mqtt_meta_topic[0] && 0 != retainedFlag ) {
+			const char *metaTopic = new_topic(message,mqtt_meta_topic);
+			rc = mosquitto_publish(mosq, &messageID, metaTopic  , strlen(message), message, 0, retainedFlag); 
+		}
+		retainedFlag = 0; /* default is off */
+
 
 		if (0 != outputDebug) fprintf(stderr,"# mosquitto_publish provided messageID=%d and return code=%d\n",messageID,rc);
 
@@ -364,6 +397,7 @@ enum arguments {
 	A_disable_mqtt,
 	A_mqtt_host,
 	A_mqtt_topic,
+	A_mqtt_meta_topic,
 	A_mqtt_port,
 	A_mqtt_user_name,
 	A_mqtt_password,
@@ -395,6 +429,7 @@ int main(int argc, char **argv) {
 		        {"special-handling",                 1,                 0, A_special_handling },
 		        {"mqtt-host",                        1,                 0, A_mqtt_host },
 		        {"mqtt-topic",                       1,                 0, A_mqtt_topic },
+		        {"mqtt-meta-topic",                  1,                 0, A_mqtt_meta_topic },
 		        {"mqtt-port",                        1,                 0, A_mqtt_port },
 		        {"mqtt-user-name",                   1,                 0, A_mqtt_user_name },
 		        {"mqtt-passwd",                      1,                 0, A_mqtt_password },
@@ -427,6 +462,9 @@ int main(int argc, char **argv) {
 				break;
 			case A_mqtt_topic:	
 				strncpy(mqtt_topic,optarg,sizeof(mqtt_topic));
+				break;
+			case A_mqtt_meta_topic:	
+				strncpy(mqtt_meta_topic,optarg,sizeof(mqtt_meta_topic));
 				break;
 			case A_mqtt_host:	
 				strncpy(mqtt_host,optarg,sizeof(mqtt_host));
@@ -487,6 +525,7 @@ int main(int argc, char **argv) {
 				fprintf(stdout,"# --disable-mqtt\t\tdisable mqtt output\n");
 				fprintf(stdout,"# --special-handing\t\tmode or protocol special handling\n");
 				fprintf(stdout,"# --mqtt-topic\t\t\tmqtt topic\n");
+				fprintf(stdout,"# --mqtt-meta-topic\t\t\tmqtt meta topic\n");
 				fprintf(stdout,"# --mqtt-host\t\t\tmqtt host\n");
 				fprintf(stdout,"# --mqtt-port\t\t\tmqtt port(optional)\n");
 				fprintf(stdout,"# --mqtt-user-name\t\tmaybe required depending on system\n");

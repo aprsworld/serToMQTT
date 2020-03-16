@@ -39,6 +39,7 @@ text|text that has a format stx payload ext
 switch|Required/Optional|argument|description
 ---|---|---|---
 --mqtt-topic|REQUIRED|topic|mqtt topic
+--mqtt-neta-topic|OPTIONAL|topic|mqtt meta-topic
 --mqtt-protocol|REQUIRED|see above|protocol id 
 --mqtt-host|REQUIRED|qualified host|mqtt host operating mqtt server
 --input-port|REQUIRED|full path to device|input serial port

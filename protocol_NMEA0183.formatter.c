@@ -26,15 +26,19 @@ static int check_the_checksum(char *s) {
 struct json_object *json_int_division(int value,char *description, char *units) {
 	struct json_object *jobj = json_object_new_object();
 	json_object_object_add(jobj,"value",json_object_new_int(value));
-	json_object_object_add(jobj,"description",json_object_new_string(description));
-	json_object_object_add(jobj,"units",json_object_new_string(units));
+	if ( 0 == no_meta  || 0 != retainedFlag ) {
+		json_object_object_add(jobj,"description",json_object_new_string(description));
+		json_object_object_add(jobj,"units",json_object_new_string(units));
+	}
 	return	jobj;
 }
 struct json_object *json_string_division(char * value,char *description, char *units) {
 	struct json_object *jobj = json_object_new_object();
 	json_object_object_add(jobj,"value",json_object_new_string(value));
-	json_object_object_add(jobj,"description",json_object_new_string(description));
-	json_object_object_add(jobj,"units",json_object_new_string(units));
+	if ( 0 == no_meta  || 0 != retainedFlag ) {
+		json_object_object_add(jobj,"description",json_object_new_string(description));
+		json_object_object_add(jobj,"units",json_object_new_string(units));
+	}
 	return	jobj;
 }
 struct json_object * json_object_new_satelite(int svid,int elv,int az,int cno) {
@@ -50,13 +54,17 @@ struct json_object *_longitude_latitude(int mode, int degrees,double minutes,cha
 	struct json_object *jobj;
 	double decimalDegrees;
 	jobj = json_object_new_object();
-	json_object_object_add(jobj,"degrees",json_object_new_int(degrees));
-	json_object_object_add(jobj,"minutes",json_object_new_double(minutes));
+	if ( 0 == no_meta  || 0 != retainedFlag ) {
+		json_object_object_add(jobj,"degrees",json_object_new_int(degrees));
+		json_object_object_add(jobj,"minutes",json_object_new_double(minutes));
+	}
 	decimalDegrees = 5.0 * minutes;
 	decimalDegrees /= 300.0;
 	decimalDegrees += (double) degrees;
 	json_object_object_add(jobj,"decimalDegrees",json_object_new_double(decimalDegrees));
-	json_object_object_add(jobj,( 0 == mode ) ? "NS" : "EW",json_object_new_string(flag));
+	if ( 0 == no_meta  || 0 != retainedFlag ) {
+		json_object_object_add(jobj,( 0 == mode ) ? "NS" : "EW",json_object_new_string(flag));
+	}
 
 
 	return jobj;
@@ -67,6 +75,14 @@ static struct json_object * _VTG( char *s ) {
 	char *p,*q;
 	double value;
 	char	*units;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
 	jobj = json_object_new_object();
 
 	strncpy(buffer,s,sizeof(buffer));
@@ -147,6 +163,14 @@ static struct json_object * _ZDA( char *s ) {
 	char	datestamp[32];
 	int	mm,dd,yyyy;
 	char *p,*q;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
 	jobj = json_object_new_object();
 
 	strncpy(buffer,s,sizeof(buffer));
@@ -201,6 +225,14 @@ static struct json_object * _HEV( char *s ) {
 	struct json_object *jobj;
 	char buffer[256];
 	char *p,*q;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
 	jobj = json_object_new_object();
 
 	strncpy(buffer,s,sizeof(buffer));
@@ -227,6 +259,14 @@ static struct json_object * _GNS( char *s ) {
 	char *p,*q;
 	int degrees;
 	double minutes,value;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
 	jobj = json_object_new_object();
 
 	strncpy(buffer,s,sizeof(buffer));
@@ -327,6 +367,14 @@ static struct json_object * _GGA( char *s ) {
 	char *p,*q;
 	int degrees;
 	double minutes,value;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
 	jobj = json_object_new_object();
 
 	strncpy(buffer,s,sizeof(buffer));
@@ -428,6 +476,14 @@ static struct json_object * _GSA( char *s ) {
 	char buffer[256];
 	char *p,*q;
 	int i;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
 	jobj = json_object_new_object();
 	struct json_object *satelites = json_object_new_array();;
 
@@ -499,6 +555,14 @@ static struct json_object * _GLL( char *s ) {
 	int degrees;
 	double minutes;
 	char	timestamp[32];
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
 	jobj = json_object_new_object();
 
 	strncpy(buffer,s,sizeof(buffer));
@@ -565,6 +629,14 @@ static struct json_object * _RMC( char *s ) {
 	char *p,*q;
 	int degrees;
 	double minutes;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
 	static int count;
 
 	count++;
@@ -658,6 +730,13 @@ static struct json_object * _GSV( char *s ) {
 	char *p,*q;
 	int loopcount = 4;
 	int i,numMsg,msgNum,numSV;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
 
 	q = buffer;
 	p = strsep(&q,",");
@@ -728,6 +807,14 @@ static struct json_object * _GST( char *s ) {
 	char timestamp[32];
 	char *p,*q;
 	double value;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
 	jobj = json_object_new_object();
 	strncpy(buffer,s,sizeof(buffer));
 
@@ -800,6 +887,14 @@ static struct json_object * _HDT( char *s ) {
 	char buffer[256];
 	char *p,*q;
 	double value;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
 	jobj = json_object_new_object();
 	strncpy(buffer,s,sizeof(buffer));
 
@@ -825,6 +920,14 @@ static struct json_object * _ROT( char *s ) {
 	char buffer[256];
 	char *p,*q;
 	double value;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
 	jobj = json_object_new_object();
 	strncpy(buffer,s,sizeof(buffer));
 
@@ -857,6 +960,14 @@ static struct json_object * _HPR( char *s ) {
 	char timestamp[32];
 	char *p,*q;
 	double value;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
 	jobj = json_object_new_object();
 	strncpy(buffer,s,sizeof(buffer));
 
@@ -902,6 +1013,14 @@ static struct json_object * _PSAT( char *s ) {
 	char buffer[256];
 	char *p,*q;
 	double value;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
 	jobj = json_object_new_object();
 	strncpy(buffer,s,sizeof(buffer));
 
@@ -979,6 +1098,14 @@ static struct json_object * _NOTFOUND( char *s ) {
 	struct json_object *jobj;
 	char buffer[256];
 	char *p,*q;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
 	jobj = json_object_new_object();
 	strncpy(buffer,s,sizeof(buffer));
 
@@ -996,6 +1123,14 @@ static struct json_object * _PASHR( char *s ) {
 	char buffer[256];
 	char *p,*q;
 	char timestamp[32];
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
 	jobj = json_object_new_object();
 	strncpy(buffer,s,sizeof(buffer));
 
