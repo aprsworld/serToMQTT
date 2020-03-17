@@ -63,8 +63,9 @@ uint64_t microtime() {
 
 struct json_object *json_division(double value,char *description, char *units) {
 	struct json_object *jobj = json_object_new_object();
-	json_object_object_add(jobj,"value",json_object_new_double(value));
-	if ( 0 == no_meta  || 0 != retainedFlag ) {
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"value",json_object_new_double(value));
+	} else {
 		json_object_object_add(jobj,"description",json_object_new_string(description));
 		json_object_object_add(jobj,"units",json_object_new_string(units));
 	}
@@ -355,11 +356,7 @@ int serToMQTT_pub(const char *message, const char *topic  ) {
 
 		static int messageID;
 		/* instance, message ID pointer, topic, data length, data, qos, retain */
-		rc = mosquitto_publish(mosq, &messageID, topic, strlen(message), message, 0, 0); 
-		if ( '\0' != mqtt_meta_topic[0] && 0 != retainedFlag ) {
-			const char *metaTopic = new_topic(message,mqtt_meta_topic);
-			rc = mosquitto_publish(mosq, &messageID, metaTopic  , strlen(message), message, 0, retainedFlag); 
-		}
+		rc = mosquitto_publish(mosq, &messageID, topic, strlen(message), message, 0, retainedFlag ); 
 		retainedFlag = 0; /* default is off */
 
 

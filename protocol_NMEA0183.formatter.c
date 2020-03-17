@@ -25,8 +25,9 @@ static int check_the_checksum(char *s) {
 
 struct json_object *json_int_division(int value,char *description, char *units) {
 	struct json_object *jobj = json_object_new_object();
-	json_object_object_add(jobj,"value",json_object_new_int(value));
-	if ( 0 == no_meta  || 0 != retainedFlag ) {
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"value",json_object_new_int(value));
+	} else {
 		json_object_object_add(jobj,"description",json_object_new_string(description));
 		json_object_object_add(jobj,"units",json_object_new_string(units));
 	}
@@ -34,8 +35,9 @@ struct json_object *json_int_division(int value,char *description, char *units) 
 }
 struct json_object *json_string_division(char * value,char *description, char *units) {
 	struct json_object *jobj = json_object_new_object();
-	json_object_object_add(jobj,"value",json_object_new_string(value));
-	if ( 0 == no_meta  || 0 != retainedFlag ) {
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"value",json_object_new_string(value));
+	} else {
 		json_object_object_add(jobj,"description",json_object_new_string(description));
 		json_object_object_add(jobj,"units",json_object_new_string(units));
 	}
@@ -54,18 +56,15 @@ struct json_object *_longitude_latitude(int mode, int degrees,double minutes,cha
 	struct json_object *jobj;
 	double decimalDegrees;
 	jobj = json_object_new_object();
-	if ( 0 == no_meta  || 0 != retainedFlag ) {
+	if ( 0 == retainedFlag ) {
 		json_object_object_add(jobj,"degrees",json_object_new_int(degrees));
 		json_object_object_add(jobj,"minutes",json_object_new_double(minutes));
-	}
-	decimalDegrees = 5.0 * minutes;
-	decimalDegrees /= 300.0;
-	decimalDegrees += (double) degrees;
-	json_object_object_add(jobj,"decimalDegrees",json_object_new_double(decimalDegrees));
-	if ( 0 == no_meta  || 0 != retainedFlag ) {
+		decimalDegrees = 5.0 * minutes;
+		decimalDegrees /= 300.0;
+		decimalDegrees += (double) degrees;
+		json_object_object_add(jobj,"decimalDegrees",json_object_new_double(decimalDegrees));
 		json_object_object_add(jobj,( 0 == mode ) ? "NS" : "EW",json_object_new_string(flag));
 	}
-
 
 	return jobj;
 }
@@ -91,7 +90,9 @@ static struct json_object * _VTG( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -151,7 +152,9 @@ static struct json_object * _VTG( char *s ) {
 		goto parse_failed;
 	}
 
-	json_object_object_add(jobj,"posMode", json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"posMode", json_object_new_string(p));
+	}
 
 	parse_failed:
 	return jobj;
@@ -179,14 +182,18 @@ static struct json_object * _ZDA( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
 	
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
 	snprintf(timestamp,sizeof(timestamp),"%2.2s:%2.2s:%s",p,p+2,p+4);
-	json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -203,7 +210,9 @@ static struct json_object * _ZDA( char *s ) {
 	}
 	yyyy = atoi(p);
 	snprintf(datestamp,sizeof(datestamp),"%02d-%02d-%04d",mm,dd,yyyy);
-	json_object_object_add(jobj,"date",json_object_new_string(datestamp));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"date",json_object_new_string(datestamp));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -241,7 +250,9 @@ static struct json_object * _HEV( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
 	
 	p = strsep(&q,",*");
 	if ( 0 == p ) {
@@ -275,14 +286,18 @@ static struct json_object * _GNS( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
 	
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
 	snprintf(timestamp,sizeof(timestamp),"%2.2s:%2.2s:%s",p,p+2,p+4);
-	json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -313,13 +328,17 @@ static struct json_object * _GNS( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"mode",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"mode",json_object_new_string(p));
+	}
 
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"satCount",json_object_new_int(atoi(p)));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"satCount",json_object_new_int(atoi(p)));
+	}
 
 	p = strsep(&q,",");
 	if ( 0 == p ) {
@@ -349,12 +368,16 @@ static struct json_object * _GNS( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"diffID",json_object_new_int(atoi(p)));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"diffID",json_object_new_int(atoi(p)));
+	}
 	p = strsep(&q,",*");
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"navStatus",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"navStatus",json_object_new_string(p));
+	}
 
 
 	parse_failed:
@@ -383,14 +406,18 @@ static struct json_object * _GGA( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
 	
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
 	snprintf(timestamp,sizeof(timestamp),"%2.2s:%2.2s:%s",p,p+2,p+4);
-	json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -421,13 +448,17 @@ static struct json_object * _GGA( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"qualityFlag",json_object_new_int(atoi(p)));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"qualityFlag",json_object_new_int(atoi(p)));
+	}
 
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"satCount",json_object_new_int(atoi(p)));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"satCount",json_object_new_int(atoi(p)));
+	}
 
 	p = strsep(&q,",");
 	if ( 0 == p ) {
@@ -465,7 +496,9 @@ static struct json_object * _GGA( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"diffID",json_object_new_int(atoi(p)));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"diffID",json_object_new_int(atoi(p)));
+	}
 
 
 	parse_failed:
@@ -493,7 +526,9 @@ static struct json_object * _GSA( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
 	
 	p = strsep(&q,",");
 	if ( 0 == p ) {
@@ -518,7 +553,9 @@ static struct json_object * _GSA( char *s ) {
 		if ( '\0' == p[0] ) {
 			continue;
 		}
-		json_object_array_add(satelites,json_object_new_int(atoi(p)));
+		if ( 0 == retainedFlag ) {
+			json_object_array_add(satelites,json_object_new_int(atoi(p)));
+		}
 	}
 	json_object_object_add(jobj,"svid",satelites);
 
@@ -571,7 +608,9 @@ static struct json_object * _GLL( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
 	
 	p = strsep(&q,",");
 	if ( 0 == p ) {
@@ -604,18 +643,24 @@ static struct json_object * _GLL( char *s ) {
 		goto parse_failed;
 	}
 	snprintf(timestamp,sizeof(timestamp),"%2.2s:%2.2s:%s",p,p+2,p+4);
-	json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"status",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"status",json_object_new_string(p));
+	}
 	p = strsep(&q,",*");
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
 
-	json_object_object_add(jobj,"posMode", json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"posMode", json_object_new_string(p));
+	}
 
 	parse_failed:
 	return jobj;
@@ -647,18 +692,24 @@ static struct json_object * _RMC( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
 	snprintf(timestamp,sizeof(timestamp),"%2.2s:%2.2s:%s",p,p+2,p+4);
-	json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"status",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"status",json_object_new_string(p));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -704,7 +755,9 @@ static struct json_object * _RMC( char *s ) {
 		goto parse_failed;
 	}
 	snprintf(datestamp,sizeof(datestamp),"%2.2s-%2.2s-20%2.2s", p+2,p,p+4);
-	json_object_object_add(jobj,"date",json_object_new_string(datestamp));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"date",json_object_new_string(datestamp));
+	}
 
 	if ( setTimeStartupCount ) {
 		int rc = setDateTimeFromGPS(datestamp,timestamp);
@@ -743,7 +796,9 @@ static struct json_object * _GSV( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -823,13 +878,17 @@ static struct json_object * _GST( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
 	snprintf(timestamp,sizeof(timestamp),"%2.2s:%2.2s:%s",p,p+2,p+4);
-	json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -903,7 +962,9 @@ static struct json_object * _HDT( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -936,7 +997,9 @@ static struct json_object * _ROT( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -949,7 +1012,9 @@ static struct json_object * _ROT( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"validityFlag",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"validityFlag",json_object_new_string(p));
+	}
 	parse_failed:
 	return jobj;
 }
@@ -976,13 +1041,17 @@ static struct json_object * _HPR( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
 	snprintf(timestamp,sizeof(timestamp),"%2.2s:%2.2s:%s",p,p+2,p+4);
-	json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -1029,22 +1098,30 @@ static struct json_object * _PSAT( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"antennaID",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"antennaID",json_object_new_string(p));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"manuallyEnteredSeparation",json_object_new_double(atof(p)));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"manuallyEnteredSeparation",json_object_new_double(atof(p)));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"autoGPSantennaSeparation",json_object_new_double(atof(p)));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"autoGPSantennaSeparation",json_object_new_double(atof(p)));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -1139,13 +1216,17 @@ static struct json_object * _PASHR( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
 	snprintf(timestamp,sizeof(timestamp),"%2.2s:%2.2s:%s",p,p+2,p+4);
-	json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"time",json_object_new_string(timestamp));
+	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -1156,7 +1237,7 @@ static struct json_object * _PASHR( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	if ( '\0' != p[0] && 'T' != p[0] ) {
+	if ( '\0' != p[0] && 'T' != p[0] && 0 == retainedFlag ) {
 		json_object_object_add(jobj,"headingType",json_object_new_string("unknown"));
 	}
 	p = strsep(&q,",");

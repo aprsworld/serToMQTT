@@ -65,7 +65,7 @@ int nmea_packet_processor(char *packet, int length, uint64_t microtime_start, in
 	int rc = 0;
 	int i;
 	int lChecksum,rChecksum;
-	const char	*topic;
+	const char	*topic = mqtt_topic;
 
 	/* quick sanity check */
 	if ( length < 9 )
@@ -98,17 +98,19 @@ int nmea_packet_processor(char *packet, int length, uint64_t microtime_start, in
 		return rc;
 	}
 
-	struct json_object *jobj;
+	struct json_object *jobj,*tmp;
 
+	tmp = ( 0 != _NMEA_FORMAT ) ?   do_NMEA0183_FORMAT(packet) : 0;
 	jobj = json_object_new_object();
-	json_object_object_add(jobj,"date",json_object_new_dateTime());
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"date",json_object_new_dateTime());
+		json_object_object_add(jobj,"milliSecondSinceStart",json_object_new_int(millisec_since_start));
+		json_object_object_add(jobj,"rawData",json_object_new_string(packet));
+	}
 
-	json_object_object_add(jobj,"milliSecondSinceStart",json_object_new_int(millisec_since_start));
-	json_object_object_add(jobj,"rawData",json_object_new_string(packet));
-
-	if ( 0 != _NMEA_FORMAT ) {
-		json_object_object_add(jobj,"formattedData", do_NMEA0183_FORMAT(packet));
-		topic = new_topic(packet,mqtt_topic);
+	if ( 0 != tmp ) {
+		json_object_object_add(jobj,"formattedData", tmp);
+		topic = new_topic(packet,( 0 == retainedFlag ) ? mqtt_topic : mqtt_meta_topic);
 	}
 
 	// fprintf(stderr,"# %s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
