@@ -125,7 +125,7 @@ static struct json_object *do_TRISONIC_MINI_FORMAT(char *s) {
 		}
 	}
 	if ( 0 != (p = strtok((char *) 0," ") )) {
-		json_object_object_add(jobj,"PreasureSnesor",json_division(atof(p),"Atmospheric Preasure","hPa"));
+		json_object_object_add(jobj,"PreasureSensor",json_division(atof(p),"Atmospheric Preasure","hPa"));
 	}
 	if ( 0 != (p = strtok((char *) 0," ") )) {
 		if (0 != strcmp("AD",p) ) {
