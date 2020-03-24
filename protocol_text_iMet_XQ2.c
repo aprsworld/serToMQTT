@@ -17,7 +17,14 @@ static struct json_object *do_iMet_XQ2_FORMAT(char *s) {
 	struct json_object *jobj;
 	jobj = json_object_new_object();
 	char buffer[128];
-	char *p,*q;
+	char *p,*q,*r;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
 	strncpy(buffer,s,sizeof(buffer));
 	q = buffer;
 		
@@ -38,10 +45,11 @@ static struct json_object *do_iMet_XQ2_FORMAT(char *s) {
 			json_division(atof(p)/100.0,"relative temperature","degrees C"));
 	}
 	if ( 0 != (p = strsep(&q,",") )) {
-		json_object_object_add(jobj,"date",json_object_new_string(_date_clean(p)));
+		 r = _date_clean(p);
 	}
 	if ( 0 != (p = strsep(&q,",") )) {
-		json_object_object_add(jobj,"time",json_object_new_string(p));
+		snprintf(buffer,sizeof(buffer),"%s %s",r,p);
+		json_object_object_add(jobj,"date",json_string_division(buffer,"date stamp","time"));
 	}
 	if ( 0 != (p = strsep(&q,",") )) {
 		json_object_object_add(jobj,"longitude", json_division(atof(p)/10000000.0,"longitude","degrees"));
@@ -53,7 +61,7 @@ static struct json_object *do_iMet_XQ2_FORMAT(char *s) {
 		json_object_object_add(jobj,"altitude", json_division(atof(p)/1000.0,"altitude","meters"));
 	}
 	if ( 0 != (p = strsep(&q,",") )) {
-		json_object_object_add(jobj,"sateliteCount",json_object_new_int(atoi(p)));
+		json_object_object_add(jobj,"sateliteCount",json_int_division(atoi(p),"count","satelites"));
 	}
 		
 

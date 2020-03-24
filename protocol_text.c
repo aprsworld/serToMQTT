@@ -69,6 +69,10 @@ static enum input_formats this_format = NO_FORMAT;
 
 static int text_packet_processor(char *packet, int length, uint64_t microtime_start, int millisec_since_start) {
 	int rc = 0;
+	const char	*topic = mqtt_topic;
+	if ( ' ' > mqtt_meta_topic[0] ) {
+		strcpy(mqtt_meta_topic,mqtt_topic);
+	}
 
 	/* quick sanity check */
 	if ( length < 9 )
@@ -83,27 +87,34 @@ static int text_packet_processor(char *packet, int length, uint64_t microtime_st
 	struct json_object *tmp = 0;
 
 	jobj = json_object_new_object();
-	json_object_object_add(jobj,"date",json_object_new_dateTime());
-	json_object_object_add(jobj,"milliSecondSinceStart",json_object_new_int(millisec_since_start));
-	json_object_object_add(jobj,"rawData",json_object_new_string(packet));
-	if ( 0 == no_meta ) {
-		switch ( this_format ) {
-			case iMet_XQ2_FORMAT:
-				tmp = do_iMet_XQ2_FORMAT(packet);
-				if ( 0 != tmp ) {
-					json_object_object_add(jobj,"iMet_XQ2_FORMAT",tmp);
-				}
-				break;
-			case TRISONIC_MINI_FORMAT:
-				tmp = do_TRISONIC_MINI_FORMAT(packet);
-				if ( 0 != tmp ) {
-					json_object_object_add(jobj,"Trisonic_Mini_FORMAT",tmp);
-				}
-				break;
-		}
+	switch ( this_format ) {
+		case iMet_XQ2_FORMAT:
+			tmp = do_iMet_XQ2_FORMAT(packet);
+			break;
+		case TRISONIC_MINI_FORMAT:
+			tmp = do_TRISONIC_MINI_FORMAT(packet);
+			break;
+	}
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"date",json_object_new_dateTime());
+		json_object_object_add(jobj,"milliSecondSinceStart",json_object_new_int(millisec_since_start));
+		json_object_object_add(jobj,"rawData",json_object_new_string(packet));
+	}
+	topic = ( 0 == retainedFlag ) ? mqtt_topic : mqtt_meta_topic;
+	switch ( this_format ) {
+		case iMet_XQ2_FORMAT:
+			if ( 0 != tmp ) {
+				json_object_object_add(jobj,"iMet_XQ2_FORMAT",tmp);
+			}
+			break;
+		case TRISONIC_MINI_FORMAT:
+			if ( 0 != tmp ) {
+				json_object_object_add(jobj,"Trisonic_Mini_FORMAT",tmp);
+			}
+			break;
 	}
 			
-	rc =  serToMQTT_pub(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY),mqtt_topic);
+	rc =  serToMQTT_pub(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY),topic);
 	json_object_put(jobj);
 	if ( 0 != tmp ) {
 		json_object_put(tmp);
