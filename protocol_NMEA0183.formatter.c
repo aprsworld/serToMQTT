@@ -191,9 +191,6 @@ static struct json_object * _ZDA( char *s ) {
 		goto parse_failed;
 	}
 	snprintf(timestamp,sizeof(timestamp),"%2.2s:%2.2s:%s",p,p+2,p+4);
-	if ( 0 == retainedFlag ) {
-		json_object_object_add(jobj,"time",json_object_new_string(timestamp));
-	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -209,9 +206,10 @@ static struct json_object * _ZDA( char *s ) {
 		goto parse_failed;
 	}
 	yyyy = atoi(p);
-	snprintf(datestamp,sizeof(datestamp),"%02d-%02d-%04d",mm,dd,yyyy);
+	snprintf(datestamp,sizeof(datestamp),"%04d-%02d-%02d",yyyy,mm,dd);
 	if ( 0 == retainedFlag ) {
-		json_object_object_add(jobj,"date",json_object_new_string(datestamp));
+		snprintf(buffer, sizeof(buffer) , "%s %s",datestamp,timestamp);
+		json_object_object_add(jobj,"date",json_object_new_string(buffer));
 	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
@@ -700,9 +698,6 @@ static struct json_object * _RMC( char *s ) {
 		goto parse_failed;
 	}
 	snprintf(timestamp,sizeof(timestamp),"%2.2s:%2.2s:%s",p,p+2,p+4);
-	if ( 0 == retainedFlag ) {
-		json_object_object_add(jobj,"time",json_object_new_string(timestamp));
-	}
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -754,18 +749,19 @@ static struct json_object * _RMC( char *s ) {
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
-	snprintf(datestamp,sizeof(datestamp),"%2.2s-%2.2s-20%2.2s", p+2,p,p+4);
+	snprintf(datestamp,sizeof(datestamp),"20%2.2s-%2.2s-%2.2s", p+4,p+2,p);
 	if ( 0 == retainedFlag ) {
-		json_object_object_add(jobj,"date",json_object_new_string(datestamp));
+		snprintf(buffer,sizeof(buffer),"%s %s",datestamp,timestamp);
+		json_object_object_add(jobj,"date",json_object_new_string(buffer));
 	}
 
 	if ( setTimeStartupCount ) {
-		int rc = setDateTimeFromGPS(datestamp,timestamp);
+		int rc = setDateTimeFromGPS(buffer);
 		if ( 0 == rc ) {
 			setTimeStartupCount--;
 		}
 	} else if ( 0 != setTimeIntervalCount && 0 == (count % setTimeIntervalCount )) {
-		(void) setDateTimeFromGPS(datestamp,timestamp);	/* ignore whether in succeeds */
+		(void) setDateTimeFromGPS(buffer);	/* ignore whether in succeeds */
 	}
 
 
@@ -1324,7 +1320,7 @@ static struct json_object * _MDA( char *s ) {
 		goto parse_failed;
 	}
 	json_object_object_add(jobj,"barometricPreasureInches", 
-		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,
+		( '\0' == p[0] ) ? nullValue() :json_division( atof(p) ,
 		( 'I' == r[0] ) ? "inches of mercury corrected to sealevel": "units unknown", 
 		( 'I' == r[0] ) ? "inches" : "unknown"));
 	p = strsep(&q,",");
@@ -1336,7 +1332,7 @@ static struct json_object * _MDA( char *s ) {
 		goto parse_failed;
 	}
 	json_object_object_add(jobj,"barometricPreasureBars", 
-		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,
+		( '\0' == p[0] ) ? nullValue() :json_division( atof(p) ,
 		( 'B' == r[0] ) ? "bars corrected to sealevel": "units unknown", 
 		( 'B' == r[0] ) ? "bars" : "unknown"));
 	p = strsep(&q,",");
@@ -1348,7 +1344,7 @@ static struct json_object * _MDA( char *s ) {
 		goto parse_failed;
 	}
 	json_object_object_add(jobj,"airTemperature", 
-		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,
+		( '\0' == p[0] ) ? nullValue() :json_division( atof(p) ,
 		( 'C' == r[0] ) ? "nearest decidegree C": "units unknown", 
 		( 'C' == r[0] ) ? "degree C" : "unknown"));
 	p = strsep(&q,",");
@@ -1360,7 +1356,7 @@ static struct json_object * _MDA( char *s ) {
 		goto parse_failed;
 	}
 	json_object_object_add(jobj,"waterTemperature", 
-		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,
+		( '\0' == p[0] ) ? nullValue() :json_division( atof(p) ,
 		( 'C' == r[0] ) ? "nearest decidegree C": "units unknown", 
 		( 'C' == r[0] ) ? "degree C" : "unknown"));
 	p = strsep(&q,",");
@@ -1368,13 +1364,13 @@ static struct json_object * _MDA( char *s ) {
 		goto parse_failed;
 	}
 	json_object_object_add(jobj,"relativeHumidity", 
-		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"to the nearest 0.1","percent"));
+		( '\0' == p[0] ) ? nullValue() :json_division( atof(p) ,"to the nearest 0.1","percent"));
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
 	}
 	json_object_object_add(jobj,"absoluteHumidity", 
-		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"to the nearest 0.1","percent"));
+		( '\0' == p[0] ) ? nullValue() :json_division( atof(p) ,"to the nearest 0.1","percent"));
 	p = strsep(&q,",");
 	if ( 0 == p ) {
 		goto parse_failed;
@@ -1384,7 +1380,7 @@ static struct json_object * _MDA( char *s ) {
 		goto parse_failed;
 	}
 	json_object_object_add(jobj,"dewPoint", 
-		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,
+		( '\0' == p[0] ) ? nullValue() :json_division( atof(p) ,
 		( 'C' == r[0] ) ? "nearest decidegree C": "units unknown", 
 		( 'C' == r[0] ) ? "degree C" : "unknown"));
 	p = strsep(&q,",");
@@ -1396,7 +1392,7 @@ static struct json_object * _MDA( char *s ) {
 		goto parse_failed;
 	}
 	json_object_object_add(jobj,"windDirectionTrue", 
-		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,
+		( '\0' == p[0] ) ? nullValue() :json_division( atof(p) ,
 		( 'T' == r[0] ) ? "nearest decidegree": "units unknown", 
 		( 'T' == r[0] ) ? "degree true" : "unknown"));
 	p = strsep(&q,",");
@@ -1408,7 +1404,7 @@ static struct json_object * _MDA( char *s ) {
 		goto parse_failed;
 	}
 	json_object_object_add(jobj,"windDirectionMagnetic", 
-		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,
+		( '\0' == p[0] ) ? nullValue() :json_division( atof(p) ,
 		( 'M' == r[0] ) ? "nearest decidegree": "units unknown", 
 		( 'M' == r[0] ) ? "degree magnetic" : "unknown"));
 	p = strsep(&q,",");
@@ -1420,7 +1416,7 @@ static struct json_object * _MDA( char *s ) {
 		goto parse_failed;
 	}
 	json_object_object_add(jobj,"windSpeendKnots", 
-		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,
+		( '\0' == p[0] ) ? nullValue() :json_division( atof(p) ,
 		( 'N' == r[0] ) ? "nearest deciknot": "units unknown", 
 		( 'N' == r[0] ) ? "knots" : "unknown"));
 	p = strsep(&q,",");
@@ -1432,7 +1428,7 @@ static struct json_object * _MDA( char *s ) {
 		goto parse_failed;
 	}
 	json_object_object_add(jobj,"windSpeendMetersPerSecond", 
-		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,
+		( '\0' == p[0] ) ? nullValue() :json_division( atof(p) ,
 		( 'M' == r[0] ) ? "nearest 0.1 m per s": "units unknown", 
 		( 'M' == r[0] ) ? "meters per second" : "unknown"));
 
@@ -1594,6 +1590,429 @@ static struct json_object * _MWV( char *s ) {
 	parse_failed:
 	return jobj;
 }
+static struct json_object * _XDR_VB( char *s ) {
+	struct json_object *jobj;
+	char buffer[256];
+	char *p,*q;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
+	jobj = json_object_new_object();
+	strncpy(buffer,s,sizeof(buffer));
+
+	q = buffer;
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	parse_failed:
+	return jobj;
+}
+static struct json_object * _XDR( char *s ) {
+	struct json_object *jobj;
+	char buffer[256];
+	char *p,*q,*r;
+	int flag;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
+	jobj = json_object_new_object();
+	strncpy(buffer,s,sizeof(buffer));
+
+	q = buffer;
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	if ( 'C' != p[0] ) {
+		/* this is not version A */
+		json_object_put(jobj);	/* destroy version A object */
+		return _XDR_VB(s);
+	}
+	/* okay the rest of the routine deals with version A only */
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"windChill", 
+		( '\0' == p[0] ) ? nullValue() :json_division( atof(p) ,"relative to the nearest decidegree","C"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	r = strsep(&q,",");
+	if ( 0 == r ) {
+		goto parse_failed;
+	}
+	flag =  ( 'C' == p[0] && 0 == strcmp(r,"WCHR"));
+	json_object_object_add(jobj,"windChillRelativeFlag",
+		json_string_division( ( 0 == flag ) ? "false" : "true","flag","boolean"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	r = strsep(&q,",");
+	if ( 0 == r ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"windChillTheoretical", 
+		( '\0' == r[0] ) ? nullValue() :json_division( atof(r) ,"relative to the nearest decidegree","C"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	r = strsep(&q,",");
+	if ( 0 == r ) {
+		goto parse_failed;
+	}
+	flag =  ( 'C' == p[0] && 0 == strcmp(r,"WCHT"));
+	json_object_object_add(jobj,"windChillTheoreticalFlag",
+		json_string_division( ( 0 == flag ) ? "false" : "true","flag","boolean"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	r = strsep(&q,",");
+	if ( 0 == r ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"heatIndex", 
+		( '\0' == r[0] ) ? nullValue() :json_division( atof(r) ,"relative to the nearest decidegree","C"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	r = strsep(&q,",");
+	if ( 0 == r ) {
+		goto parse_failed;
+	}
+	flag =  ( 'C' == p[0] && 0 == strcmp(r,"HINX"));
+	json_object_object_add(jobj,"heatIndexFlag",
+		json_string_division( ( 0 == flag ) ? "false" : "true","flag","boolean"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	r = strsep(&q,",");
+	if ( 0 == r ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"measureAtmosphericPreasure", 
+		( '\0' == r[0] ) ? nullValue() :json_division( atof(r) ,"tsuredo the nearest millibar","bar"));
+	r = strsep(&q,",");
+	if ( 0 == r  || 'B' != r[0] ) {
+		goto parse_failed;
+	}
+	p = strsep(&q,",*");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	flag = ( 0 == strcmp(p,"STNP"));
+	json_object_object_add(jobj,"stationPreassureFlag",
+		json_string_division( ( 0 == flag ) ? "false" : "true","flag","boolean"));
+		
+
+	parse_failed:
+	return jobj;
+}
+static struct json_object * _DTM( char *s ) {
+	struct json_object *jobj;
+	char buffer[256];
+	char *p,*q,*r;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
+	jobj = json_object_new_object();
+	strncpy(buffer,s,sizeof(buffer));
+
+	q = buffer;
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	if ( 0 == strcmp(p,"W84")) {
+		r = "WGS84";
+	} else if ( 0 == strcmp(p,"W72")) {
+		r = "WGS72";
+	} else if ( 0 == strcmp(p,"S85")) {
+		r = "SG85";
+	} else if ( 0 == strcmp(p,"P90")) {
+		r = "PE90";
+	} else if ( 0 == strcmp(p,"IHO")) {
+		r = "International Hydrographic Org.";
+	} else {
+		r = "unknown";
+	}
+	json_object_object_add(jobj,"localDatum",
+		json_string_division( p,"datum ID",r));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"subdivision",
+		( '\0' == p[0] ) ? nullValue() : json_string_division( p,"IHO Publication S-60 Appendices B and C.",""));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"latitudeOffset",
+		( '\0' == p[0] ) ? nullValue() : json_division( atof(p),"nearest milliminute","minutes"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"latitudeFlag",
+		( '\0' == p[0] ) ? nullValue() : json_string_division( p,"North or South","boolean"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"longitudeOffset",
+		( '\0' == p[0] ) ? nullValue() : json_division( atof(p),"nearest milliminute","minutes"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"longitudeFlag",
+		( '\0' == p[0] ) ? nullValue() : json_string_division( p,"East or West","boolean"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"signedAltitudeOffset",
+		( '\0' == p[0] ) ? nullValue() : json_division( atof(p),"nearest meter","meters"));
+	p = strsep(&q,",*");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	if ( 0 == strcmp(p,"W84")) {
+		r = "WGS84";
+	} else if ( 0 == strcmp(p,"W72")) {
+		r = "WGS72";
+	} else if ( 0 == strcmp(p,"S85")) {
+		r = "SG85";
+	} else if ( 0 == strcmp(p,"P90")) {
+		r = "PE90";
+	} else if ( 0 == strcmp(p,"IHO")) {
+		r = "International Hydrographic Org.";
+	} else {
+		r = "unknown";
+	}
+	json_object_object_add(jobj,"referenceDatum",
+		json_string_division( p,"datum ID",r));
+	parse_failed:
+	return jobj;
+}
+static struct json_object * _VWR( char *s ) {
+	struct json_object *jobj;
+	char buffer[256];
+	char *p,*q,*r;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
+	jobj = json_object_new_object();
+	strncpy(buffer,s,sizeof(buffer));
+
+	q = buffer;
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	r = strsep(&q,",");
+	if ( 0 == r ) {
+		goto parse_failed;
+	}
+	switch ( r[0] ) {
+		case'R':	r="right of centerline";
+			break;
+		case 'L':	r="left of centerline";
+			break;
+		default:	r="unknown";
+	}
+	json_object_object_add(jobj,"windAngle", 
+		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"nearest 0.1 degree","degree"));
+	json_object_object_add(jobj,"windAngleLeftRight", 
+		( '\0' == r[0] ) ? NULL :json_string_division( r ,"nearest 0.1 degree","degree"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"windSpeedKnots", 
+		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"nearest 0.1 knot","knots"));
+	r = strsep(&q,",");
+	if ( 0 == r ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"windSpeedUnitsFlag", 
+		( '\0' == r[0] ) ? NULL :json_string_division( 
+		('N'  == r[0]) ?  "knots" : "unknown" ,"nearest 0.1 knot","knots"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"windSpeedMetersPerSecond", 
+		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"nearest 0.1 m per s","mps"));
+	r = strsep(&q,",");
+	if ( 0 == r ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"windSpeedUnitsFlagMPS", 
+		( '\0' == r[0] ) ? NULL :json_string_division( 
+		('M'  == r[0]) ?  "mps" : "unknown" ,"nearest 0.1 mps","mps"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"windSpeedkilometersPerHour", 
+		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"nearest 0.1 kph","kph"));
+	r = strsep(&q,",*");
+	if ( 0 == r ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"windSpeedUnitsFlagKPH", 
+		( '\0' == r[0] ) ? NULL :json_string_division( 
+		('K'  == r[0]) ?  "kph" : "unknown" ,"nearest 0.1 kph","kph"));
+
+
+
+	parse_failed:
+	return jobj;
+}
+static struct json_object * _VWT( char *s ) {
+	struct json_object *jobj;
+	char buffer[256];
+	char *p,*q,*r;
+	static int _Count;
+
+	if ( 0 == _Count ) {
+		retainedFlag = 1;
+	}
+
+	_Count++;
+
+	jobj = json_object_new_object();
+	strncpy(buffer,s,sizeof(buffer));
+
+	q = buffer;
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"messageType",json_object_new_string(p));
+	}
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	r = strsep(&q,",");
+	if ( 0 == r ) {
+		goto parse_failed;
+	}
+	switch ( r[0] ) {
+		case'R':	r="right of centerline";
+			break;
+		case 'L':	r="left of centerline";
+			break;
+		default:	r="unknown";
+	}
+	json_object_object_add(jobj,"windAngle", 
+		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"nearest 0.1 degree","degree"));
+	json_object_object_add(jobj,"windAngleLeftRight", 
+		( '\0' == r[0] ) ? NULL :json_string_division( r ,"nearest 0.1 degree","degree"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"windSpeedKnots", 
+		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"nearest 0.1 knot","knots"));
+	r = strsep(&q,",");
+	if ( 0 == r ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"windSpeedUnitsFlag", 
+		( '\0' == r[0] ) ? NULL :json_string_division( 
+		('N'  == r[0]) ?  "knots" : "unknown" ,"nearest 0.1 knot","knots"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"windSpeedMetersPerSecond", 
+		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"nearest 0.1 m per s","mps"));
+	r = strsep(&q,",");
+	if ( 0 == r ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"windSpeedUnitsFlagMPS", 
+		( '\0' == r[0] ) ? NULL :json_string_division( 
+		('M'  == r[0]) ?  "mps" : "unknown" ,"nearest 0.1 mps","mps"));
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"windSpeedkilometersPerHour", 
+		( '\0' == p[0] ) ? NULL :json_division( atof(p) ,"nearest 0.1 kph","kph"));
+	r = strsep(&q,",*");
+	if ( 0 == r ) {
+		goto parse_failed;
+	}
+	json_object_object_add(jobj,"windSpeedUnitsFlagKPH", 
+		( '\0' == r[0] ) ? NULL :json_string_division( 
+		('K'  == r[0]) ?  "kph" : "unknown" ,"nearest 0.1 kph","kph"));
+
+
+
+	parse_failed:
+	return jobj;
+}
 static struct json_object *do_NMEA0183_FORMAT(char *s) {
 	struct json_object *jobj;
 	jobj = json_object_new_object();
@@ -1638,6 +2057,14 @@ static struct json_object *do_NMEA0183_FORMAT(char *s) {
 		 json_object_object_add(jobj,"windDirectionAndSpeed",_MWD(s));	
 	} else if ( 0 == strncmp("MWV",s+3,3)) {
 		 json_object_object_add(jobj,"windSpeedAngle",_MWV(s));	
+	} else if ( 0 == strncmp("XDR",s+3,3)) {
+		 json_object_object_add(jobj,"transducerMeasurements",_XDR(s));	
+	} else if ( 0 == strncmp("DTM",s+3,3)) {
+		 json_object_object_add(jobj,"datumReference",_DTM(s));	
+	} else if ( 0 == strncmp("VWR",s+3,3)) {
+		 json_object_object_add(jobj,"relativeWindSpeedAndAngle",_VWR(s));	
+	} else if ( 0 == strncmp("VWT",s+3,3)) {
+		 json_object_object_add(jobj,"trueWindSpeedAndAngle",_VWT(s));	
 	} else {
 		 json_object_object_add(jobj,"notFound",_NOTFOUND(s));	
 	}

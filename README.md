@@ -128,3 +128,35 @@ Command line in the lab looks like:
 The defaults of stx='$' and etx=newline are used, and need not be specified.
 
 
+# nmea.cmd
+
+## purpose
+
+The nmea.cmd purose is to format the NMEA0183 command to be sent to a device.   This can be difficult to do in
+a Linux system as terminals and other programs end records with newline rather CrLf.   Also devices receiving the
+the commands are expecting the checksum.
+
+## use
+
+`./nmea.cmd "PAMTC,EN,VWT,1,20"` 
+
+formats the PAMTC commmand correctly, puts the '$' prefix on the command and
+computes the checksum.   Then it applies the CrLf to the end.
+
+In use in a shell script:
+
+`
+./nmea.cmd "PAMTX" > /dev/ttyUSB3
+
+sleep 2
+
+./nmea.cmd "PAMTC,EN,VWT,1,20" > /dev/ttyUSB3
+
+sleep 1
+
+./nmea.cmd "PAMTX,1" > /dev/ttyUSB3
+`
+
+This turns off sending from the device, enables the VWT command, and then turns on sending from the device.
+
+

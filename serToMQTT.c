@@ -61,6 +61,13 @@ uint64_t microtime() {
 	return ((uint64_t)time.tv_sec * 1000000) + time.tv_usec;
 }
 
+struct json_object *nullValue(void) {
+	struct json_object *jobj = json_object_new_object();
+	if ( 0 == retainedFlag ) {
+		json_object_object_add(jobj,"value",NULL);
+	}
+	return	jobj;
+}
 struct json_object *json_division(double value,char *description, char *units) {
 	struct json_object *jobj = json_object_new_object();
 	if ( 0 == retainedFlag ) {

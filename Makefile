@@ -22,5 +22,8 @@ setDateTimeFromGPS.o: setDateTimeFromGPS.c
 backToJson: backToJson.c protocol_NMEA0183.formatter.c
 	$(CC) backToJson.c  -o backToJson $(CFLAGS)  -lm -ljson-c -lmosquitto -I/usr/include/json-c/
 
+nmea.cmd: nmea.cmd.c
+	$(CC) nmea.cmd.c  -o nmea.cmd 
+
 clean:
 	rm -f *.o 
