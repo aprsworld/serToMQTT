@@ -66,8 +66,8 @@ struct json_object *_longitude_latitude(int mode, int degrees,double minutes,cha
 	decimalDegrees = 5.0 * minutes;
 	decimalDegrees /= 300.0;
 	decimalDegrees += (double) degrees;
+	decimalDegrees = ( 'W' == flag[0] || 'S' == flag[0] ) ? ( 0.0 - decimalDegrees) : decimalDegrees;
 	json_object_object_add(jobj,"decimalDegrees",json_division(decimalDegrees,"degrees","degrees"));
-	json_object_object_add(jobj,"directionFlag",json_string_division(flag,( 0 == mode ) ? "NS" : "EW","direction"));
 
 	return jobj;
 }
