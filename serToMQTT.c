@@ -27,6 +27,7 @@
 #include <time.h>
 #include "serToMQTT.h"
 #include <ctype.h>
+#include <math.h>
 
 static int mqtt_port=1883;
 static char mqtt_host[256];
@@ -71,7 +72,11 @@ struct json_object *nullValue(void) {
 struct json_object *json_division(double value,char *description, char *units) {
 	struct json_object *jobj = json_object_new_object();
 	if ( 0 == retainedFlag ) {
-		json_object_object_add(jobj,"value",json_object_new_double(value));
+		if ( isnan(value )) {
+			json_object_object_add(jobj,"value",nullValue());
+		} else {
+			json_object_object_add(jobj,"value",json_object_new_double(value));
+		}
 	} else {
 		json_object_object_add(jobj,"description",json_object_new_string(description));
 		json_object_object_add(jobj,"units",json_object_new_string(units));
