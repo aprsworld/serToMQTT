@@ -12,5 +12,11 @@ extern int serToMQTT_pub(const char *message ,const char *topic );
 extern char mqtt_topic[];
 extern char mqtt_meta_topic[];
 extern int retainedFlag;
+extern int outputDebug;
+extern int alarmSeconds;
+extern int milliseconds_timeout;
 extern const char * new_topic(const char *packet,const char *topic );
+extern char *strsave(const char *s );
+extern int do_station(const char *cmd );
+
 #endif

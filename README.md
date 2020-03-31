@@ -127,6 +127,17 @@ Command line in the lab looks like:
 
 The defaults of stx='$' and etx=newline are used, and need not be specified.
 
+## FL702LT instruments
+
+Command line in the lab looks like:
+
+`./serToMQTT --mqtt-topic /toStation/A2744 --protocol FL702LT --mqtt-host localhost --input-port /dev/ttyUSB2 --input-speed 9600 --station "talk=WI listener=01 interval=1000"`
+
+The defaults of stx='$' and etx=newline are used, and need not be specified.
+
+--station must be used once but can be used more than once if there are multiple instruments on the same port.   Each talker and listener must be unique.   The interval is in milliseconds and intervals can duplicate.   Optionally there is 'startup=' inside of each --station.   To use NMEA format `--station "talker=WI listener=01 interval=1000 startup=DFN"`.  To use polar format `--station "talker=WI listener=01 interval=1000 startup=DFP"`.  Each station does not have to use the same format.  Remember that you must use something in the shell or script to group all of the station parameters.
+
+
 
 # nmea.cmd
 

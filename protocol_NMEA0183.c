@@ -194,6 +194,8 @@ static int  _serial_process(int serialfd) {
 				alarm(0);
 				/* process packet */
 				rc = nmea_packet_processor(packet,packet_pos,microtime_start,milliseconds_since_stx);
+				microtime_start=0;
+				break;
 			}
 
 			if ( packet_pos < sizeof(packet)-1 ) {

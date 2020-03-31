@@ -229,9 +229,15 @@ void nmea0183_packet_processor(int serialfd,char *special_handling ) {
 	nmea0183_engine(serialfd,special_handling);
 	/* this is a wrapper for the actual function in protocol_NMEA0183.c */
 }
+void fl702lt_packet_processor(int serialfd,char *special_handling ) {
+	extern void fl702lt_engine(int serialfd,char *special_handling );
+	fl702lt_engine(serialfd,special_handling);
+	/* this is a wrapper for the actual function in protocol_FL702LT.c */
+}
 static MODES modes[] = {
 	{"text",text_packet_processor},
 	{"nmea0183",nmea0183_packet_processor},
+	{"fl702lt",fl702lt_packet_processor},
 	{},	/* sentinnel */
 };
 
@@ -262,7 +268,7 @@ static void _do_speed( int *speed,char *s ) {
 		exit(1);
 	}
 }
-char	*strsave(char *s )
+char	*strsave(const char *s )
 {
 	char	*ret_val = 0;
 
@@ -410,6 +416,7 @@ enum arguments {
 	A_mqtt_port,
 	A_mqtt_user_name,
 	A_mqtt_password,
+	A_station,
 	A_no_meta,
 	A_timeout,
 	A_alarm_no_data_after_start,
@@ -442,6 +449,7 @@ int main(int argc, char **argv) {
 		        {"mqtt-port",                        1,                 0, A_mqtt_port },
 		        {"mqtt-user-name",                   1,                 0, A_mqtt_user_name },
 		        {"mqtt-passwd",                      1,                 0, A_mqtt_password },
+		        {"station",                           1,                 0, A_station },
 		        {"timeout",                          1,                 0, A_timeout },
 		        {"alarm-no-data-after-start",        1,                 0, A_alarm_no_data_after_start },
 		        {"sleep-before-startup",             1,                 0, A_sleep_before_startup },
@@ -462,6 +470,9 @@ int main(int argc, char **argv) {
 
 	/* command line arguments */
 		switch (n) {
+			case A_station:
+				do_station(optarg);
+				break;
 			case A_no_meta:
 				no_meta = 1;
 				fprintf(stderr,"# no meta-data to be output\n");
@@ -540,6 +551,7 @@ int main(int argc, char **argv) {
 				fprintf(stdout,"# --mqtt-user-name\t\tmaybe required depending on system\n");
 				fprintf(stdout,"# --mqtt-passwd\t\t\tmaybe required depending on system\n");
 				fprintf(stdout,"# --protocol\t\t\tprotocol\n");
+				fprintf(stdout,"# --station\t\t\t\"listener=?? talker=?? interval=? [startup=??]\"\n");
 				fprintf(stdout,"# --alarm-no-data-after-start\tseconds\tTerminate after seconds without data\n");
 				fprintf(stdout,"# --timeout\t\t\tmilliseconds\tTimeout packet after milliseconds since start\n");
 				fprintf(stdout,"# --sleep-before-startup\tseconds\tstartup delay\n");
