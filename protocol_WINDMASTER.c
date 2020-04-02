@@ -1,3 +1,5 @@
+/* IT seems that the windMASTER needs to be polled inorder to get a suitable data rate.
+   therefore we cannot use protocol_text.c */
 #define _GNU_SOURCE
 #include <stdio.h>
 #include <errno.h>
@@ -26,6 +28,11 @@
 #include "serToMQTT.h"
 #include <ctype.h>
 
+/* STX is the start of the record.   ETX is the end of the paylocal   crlf is end of record */
+/* checksum immediately follows EYX and is immediately followed by crlf */
+#define STX 2
+#define ETX 3
+
 typedef struct station {
 	struct station *left,*right;
 	char *listenerID;	/* set at startup by user */
@@ -33,17 +40,17 @@ typedef struct station {
 	char *startupCmd;	/* optionally set by user */
 	int milliSecondInterval;	/* set at startup by user */
 	struct timeval	tv;
-} STATION;
+} ANEMOMETER;
 
-static STATION *rootStation;
+static ANEMOMETER *rootStation;
 
-static void _installStation( const STATION *s ) {
+void installStation( const ANEMOMETER *s ) {
 	if ( 0 == rootStation ) {
-		rootStation = calloc(1,sizeof(STATION));
+		rootStation = calloc(1,sizeof(ANEMOMETER));
 		*rootStation = *s;
 	}
 	else {
-		STATION *p,*q;
+		ANEMOMETER *p,*q;
 		int ind;
 		p = rootStation;
 		while ( 0 != p ) {
@@ -60,7 +67,7 @@ static void _installStation( const STATION *s ) {
 				p = q->right;
 			}
 		}
-		p = calloc(1,sizeof(STATION));
+		p = calloc(1,sizeof(ANEMOMETER));
 		*p = *s;
 		if ( ind < 0 ) {
 			q->left = p;
@@ -71,11 +78,11 @@ static void _installStation( const STATION *s ) {
 	}	
 }
 
-int do_station(const char *cmd ) {
+int do_anemometer(const char *cmd ) {
 	/*   cmd format will be "listener=01 talker=WI interval=1500" */
 	int rc=0;
 	char command[256] = {};
-	STATION station = {};
+	ANEMOMETER station = {};
 	char *p,*q;
 	strncpy(command,cmd,sizeof(command));
 	q = command;
@@ -101,17 +108,17 @@ int do_station(const char *cmd ) {
 		fprintf(stderr,"# bad --station\nEpecting \"listener=01 talker=WI interval=1500\"\n");
 	}
 	else {
-		_installStation(&station);
+		installStation(&station);
 	}
 			
 	return	rc;
 }
 
-int _FL702LT_FORMAT = 1;
+int _WINDMASTER_FORMAT = 1;
 
-#include "protocol_FL702LT.formatter.c"
+// #include "protocol_WINDMASTER.formatter.c"
 
-static int _fl702lt_packet_processor(char *packet, int length, uint64_t microtime_start, int millisec_since_start) {
+static int _windMaster_packet_processor(char *packet, int length, uint64_t microtime_start, int millisec_since_start) {
 	int rc = 0;
 	int i;
 	int lChecksum,rChecksum;
@@ -149,9 +156,9 @@ static int _fl702lt_packet_processor(char *packet, int length, uint64_t microtim
 	}
 
 	struct json_object *jobj;
-	struct json_object *tmp;
+//	struct json_object *tmp;
 
-	tmp = ( 0 != _FL702LT_FORMAT ) ?   do_FL702LT_FORMAT(packet) : 0;
+//	tmp = ( 0 != _WINDMASTER_FORMAT ) ?   do_WINDMASTER_FORMAT(packet) : 0;
 	jobj = json_object_new_object();
 	if ( 0 == retainedFlag ) {
 		json_object_object_add(jobj,"date",json_object_new_dateTime());
@@ -159,10 +166,12 @@ static int _fl702lt_packet_processor(char *packet, int length, uint64_t microtim
 		json_object_object_add(jobj,"rawData",json_object_new_string(packet));
 	}
 
+#if 0
 	if ( 0 != tmp ) {
 		json_object_object_add(jobj,"formattedData", tmp);
 		topic = new_topic(packet,( 0 == retainedFlag ) ? mqtt_topic : mqtt_meta_topic);
 	}
+#endif
 
 	// fprintf(stderr,"# %s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
 	rc = serToMQTT_pub(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY),topic);
@@ -212,8 +221,8 @@ static int  _serial_process(int serialfd) {
 	milliseconds_since_stx=(int) ((microtime_now-microtime_start)/1000.0);
 
 
-	/* FL702LT packets:
-		start with '$'
+	/* WINDMASTER packets:
+		start with STX
 		end with '\r' or '\n'
 		get aborted on timeout
 	*/
@@ -221,7 +230,7 @@ static int  _serial_process(int serialfd) {
 	/* copy byte to packet */
 	for ( i=0 ; 0 == rc && i<n ; i++ ) {
 		/* look for start character */
-		if ( STATE_LOOKING_FOR_STX == state && '$' ==  buff[i] ) {
+		if ( STATE_LOOKING_FOR_STX == state && STX ==  buff[i] ) {
 			packet_pos=0;
 			microtime_start=microtime_now;
 			state=STATE_IN_PACKET;
@@ -243,7 +252,7 @@ static int  _serial_process(int serialfd) {
 				state=STATE_LOOKING_FOR_STX;
 				alarm(0);
 				/* process packet */
-				rc = _fl702lt_packet_processor(packet,packet_pos,microtime_start,milliseconds_since_stx);
+				rc = _windMaster_packet_processor(packet,packet_pos-3,microtime_start,milliseconds_since_stx);
 				microtime_start = 0;
 				break;
 			}
@@ -266,7 +275,7 @@ static int  _serial_process(int serialfd) {
 
 return	rc;
 }
-void set_the_new_timer(struct timeval *xv, STATION *p ) {
+static void _set_the_new_timer(struct timeval *xv, ANEMOMETER *p ) {
 	struct timeval tv;
 
 	if ( 0 == p->tv.tv_sec ) {
@@ -274,7 +283,6 @@ void set_the_new_timer(struct timeval *xv, STATION *p ) {
 	} else {
 		tv = p->tv;
 	}
-
 	tv.tv_usec += p->milliSecondInterval * 1000;
 	while ( tv.tv_usec > 1000000 ) {
 		tv.tv_sec++;
@@ -285,7 +293,7 @@ void set_the_new_timer(struct timeval *xv, STATION *p ) {
 	p->tv.tv_sec = tv.tv_sec;
 	p->tv.tv_usec = tv.tv_usec;
 }
-void do_startupCmd( STATION *p,int serialfd ) {
+void do_anemometerCmd( ANEMOMETER *p,int serialfd ) {
 	int lChecksum,length,i;
 	char	buffer[128] = {};
 	snprintf(buffer,sizeof(buffer),"%2.2s,%s",p->listenerID,p->startupCmd);
@@ -304,19 +312,19 @@ void do_startupCmd( STATION *p,int serialfd ) {
 	p->startupCmd = 0;
 	
 }
-void check_station_intervals(STATION *p, int serialfd ) {
+void check_anemometer_intervals(ANEMOMETER *p, int serialfd ) {
 	if ( 0 != p ) {
 		int lChecksum,length,i;
 		char	buffer[64] = {};
 
-		check_station_intervals(p->left,serialfd);
+		check_anemometer_intervals(p->left,serialfd);
 		if ( 0 != p->startupCmd ) {
-			do_startupCmd(p,serialfd);
+			do_anemometerCmd(p,serialfd);
 		}
 		struct timeval time;
 		gettimeofday(&time, NULL); 
 		if ( (time.tv_sec > p->tv.tv_sec  ) || (time.tv_sec == p->tv.tv_sec && time.tv_usec > p->tv.tv_usec)) {
-			set_the_new_timer(&time,p);
+			_set_the_new_timer(&time,p);
 			snprintf(buffer,sizeof(buffer),"%2.2s,WV?",p->listenerID);
 			length = strlen(buffer);
 			/* calculate local checksum */
@@ -332,13 +340,13 @@ void check_station_intervals(STATION *p, int serialfd ) {
 			fflush(stderr);
 		}
 
-		check_station_intervals(p->right,serialfd);
+		check_anemometer_intervals(p->right,serialfd);
 		}
 	}
 }
 
 
-void fl702lt_engine(int serialfd,char *special_handling ) {
+void windMaster_engine(int serialfd,char *special_handling ) {
 	int i;
 	int rc = 0;
 
@@ -375,7 +383,7 @@ void fl702lt_engine(int serialfd,char *special_handling ) {
 		} 
 		
 		if ( FD_ISSET(serialfd, &write_fd_set) ) {
-			check_station_intervals(rootStation,serialfd);
+			check_anemometer_intervals(rootStation,serialfd);
 		} 
 
 		if ( FD_ISSET(serialfd, &read_fd_set) ) {

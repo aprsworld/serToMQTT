@@ -18,5 +18,6 @@ extern int milliseconds_timeout;
 extern const char * new_topic(const char *packet,const char *topic );
 extern char *strsave(const char *s );
 extern int do_station(const char *cmd );
+extern int do_anemometer(const char *cmd );
 
 #endif
