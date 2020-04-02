@@ -266,6 +266,32 @@ static int  _serial_process(int serialfd) {
 
 return	rc;
 }
+static struct timeval next_tv;
+void sleep_half_the_time(void) {
+	int	diff;
+	struct timeval time;
+	gettimeofday(&time, NULL); 
+	if ( time.tv_sec < next_tv.tv_sec ) {
+		/* sleep until the next second */
+		diff = 1000000 -time.tv_usec;
+		usleep( diff );	/* sleep half the remainming seconds */ 
+	} else if ( next_tv.tv_usec > time.tv_usec  ) {
+		diff = next_tv.tv_usec -time.tv_usec;
+		diff >>= 1;
+		usleep( diff );	/* sleep half the remainming useconds */ 
+	} else {
+		diff = 1000;
+		usleep( diff );	/* sleep 1 millisecond */ 
+	}
+
+}
+void set_half_sleep(STATION *p ) {
+	if ( 0 == next_tv.tv_sec ) { 
+		next_tv = p->tv;
+	} else if ( (p->tv.tv_sec < next_tv.tv_sec) || ( p->tv.tv_sec == next_tv.tv_sec && p->tv.tv_usec <= next_tv.tv_usec)) {
+		next_tv = p->tv;
+	}
+}
 void set_the_new_timer(struct timeval *xv, STATION *p ) {
 	struct timeval tv;
 
@@ -284,6 +310,9 @@ void set_the_new_timer(struct timeval *xv, STATION *p ) {
 
 	p->tv.tv_sec = tv.tv_sec;
 	p->tv.tv_usec = tv.tv_usec;
+
+	set_half_sleep(p);
+	
 }
 void do_startupCmd( STATION *p,int serialfd ) {
 	int lChecksum,length,i;
@@ -327,7 +356,7 @@ void check_station_intervals(STATION *p, int serialfd ) {
 
 		snprintf(buffer,sizeof(buffer),"$%2.2s,WV?*%02X\r\n",p->listenerID,lChecksum);
 		write(serialfd,buffer,strlen(buffer));
-		if ( outputDebug ) {
+		if (  outputDebug ) {
 			fprintf(stderr,"# %s",buffer);
 			fflush(stderr);
 		}
@@ -336,6 +365,7 @@ void check_station_intervals(STATION *p, int serialfd ) {
 		}
 	}
 }
+
 
 
 void fl702lt_engine(int serialfd,char *special_handling ) {
@@ -365,6 +395,7 @@ void fl702lt_engine(int serialfd,char *special_handling ) {
 		/* Block until input arrives on one or more active sockets. */
 		write_fd_set = read_fd_set = active_fd_set;
 
+		// fputc('.',stderr);
 		i=select(FD_SETSIZE, &read_fd_set, &write_fd_set, NULL, NULL);
 		if ( EBADF == i ) {
 			fprintf(stderr,"# select() EBADF error. Aborting.\n");
@@ -376,6 +407,7 @@ void fl702lt_engine(int serialfd,char *special_handling ) {
 		
 		if ( FD_ISSET(serialfd, &write_fd_set) ) {
 			check_station_intervals(rootStation,serialfd);
+			sleep_half_the_time();
 		} 
 
 		if ( FD_ISSET(serialfd, &read_fd_set) ) {
