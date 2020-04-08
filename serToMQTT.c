@@ -131,6 +131,10 @@ static void signal_handler(int signum) {
 		
 		/* re-install alarm handler */
 		signal(SIGUSR1, signal_handler);
+	} else if ( SIGTERM == signum ) {
+		fprintf(stderr,"# Terminating.\n");
+		_mosquitto_shutdown();
+		exit(0);
 	} else {
 		fprintf(stderr,"\n# Caught unexpected signal %d.\n",signum);
 		fprintf(stderr,"# Terminating.\n");
@@ -234,10 +238,16 @@ void fl702lt_packet_processor(int serialfd,char *special_handling ) {
 	fl702lt_engine(serialfd,special_handling);
 	/* this is a wrapper for the actual function in protocol_FL702LT.c */
 }
+void windMaster_packet_processor(int serialfd,char *special_handling ) {
+	extern void windMaster_engine(int serialfd,char *special_handling );
+	windMaster_engine(serialfd,special_handling);
+	/* this is a wrapper for the actual function in protocol_WINDMASTER.c */
+}
 static MODES modes[] = {
 	{"text",text_packet_processor},
 	{"nmea0183",nmea0183_packet_processor},
 	{"fl702lt",fl702lt_packet_processor},
+	{"windmaster",windMaster_packet_processor},
 	{},	/* sentinnel */
 };
 
@@ -595,6 +605,7 @@ int main(int argc, char **argv) {
 	/* install signal handler */
 	signal(SIGALRM, signal_handler); /* timeout */
 	signal(SIGUSR1, signal_handler); /* user signal to do data block debug dump */
+	signal(SIGTERM, signal_handler); /* user signal to terminate */
 	signal(SIGPIPE, signal_handler); /* broken TCP connection */
 
 	/* setup serial port for NMEA */

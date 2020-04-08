@@ -20,7 +20,7 @@ protocol_NMEA0183.o: protocol_NMEA0183.c serToMQTT.h \
 protocol_FL702LT.o: protocol_FL702LT.c serToMQTT.h protocol_FL702LT.formatter.c
 	$(CC)  -c protocol_FL702LT.c  $(CFLAGS) -I/usr/include/json-c/
 
-protocol_WINDMASTER.o: protocol_WINDMASTER.c serToMQTT.h 
+protocol_WINDMASTER.o: protocol_WINDMASTER.c serToMQTT.h  protocol_WINDMASTER.formatter.c
 	$(CC)  -c protocol_WINDMASTER.c  $(CFLAGS) -I/usr/include/json-c/
 
 setDateTimeFromGPS.o: setDateTimeFromGPS.c 

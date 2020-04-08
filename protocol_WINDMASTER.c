@@ -36,23 +36,22 @@
 typedef struct station {
 	struct station *left,*right;
 	char *listenerID;	/* set at startup by user */
-	char *talkerID;	/* set at startup by user */
-	char *startupCmd;	/* optionally set by user */
+	char *pollCmd;	/* set by user */
 	int milliSecondInterval;	/* set at startup by user */
 	struct timeval	tv;
 } ANEMOMETER;
 
-static ANEMOMETER *rootStation;
+static ANEMOMETER *rootAnemometer;
 
-void installStation( const ANEMOMETER *s ) {
-	if ( 0 == rootStation ) {
-		rootStation = calloc(1,sizeof(ANEMOMETER));
-		*rootStation = *s;
+void installAnemometer( const ANEMOMETER *s ) {
+	if ( 0 == rootAnemometer ) {
+		rootAnemometer = calloc(1,sizeof(ANEMOMETER));
+		*rootAnemometer = *s;
 	}
 	else {
 		ANEMOMETER *p,*q;
 		int ind;
-		p = rootStation;
+		p = rootAnemometer;
 		while ( 0 != p ) {
 			ind = strcmp(s->listenerID,p->listenerID);
 			if ( 0 == ind ) {
@@ -89,26 +88,17 @@ int do_anemometer(const char *cmd ) {
 
 	while ( 0 != (p = strsep(&q," "))) {
 		if ( 0 == strncmp("listener",p,8)) {
-			if ( 11 != strlen(p) ) {
+			if ( 10 != strlen(p) ) {
 				rc = 1;
 			}
 			station.listenerID = strsave(p+9);
-		} else if ( 0 == strncmp("talker",p,6)) {
-			if ( 9 != strlen(p) ) {
-				rc = 2;;
-			}
-			station.talkerID = strsave(p+7);
-		} else if ( 0 == strncmp("startup",p,7)) {
-			station.startupCmd = strsave(p+8);
-		} else if ( 0 == strncmp("interval",p,8)) {
-			station.milliSecondInterval=atoi(p+9);
 		}
 	}
-	if ( 0 != rc || 0 == station.milliSecondInterval || 0 == station.listenerID || 0 == station.talkerID ) {
-		fprintf(stderr,"# bad --station\nEpecting \"listener=01 talker=WI interval=1500\"\n");
+	if ( 0 != rc || 0 == station.listenerID ) {
+		fprintf(stderr,"# bad --anemometer\nEpecting \"listener=Q\"\n");
 	}
 	else {
-		installStation(&station);
+		installAnemometer(&station);
 	}
 			
 	return	rc;
@@ -116,7 +106,7 @@ int do_anemometer(const char *cmd ) {
 
 int _WINDMASTER_FORMAT = 1;
 
-// #include "protocol_WINDMASTER.formatter.c"
+#include "protocol_WINDMASTER.formatter.c"
 
 static int _windMaster_packet_processor(char *packet, int length, uint64_t microtime_start, int millisec_since_start) {
 	int rc = 0;
@@ -140,7 +130,7 @@ static int _windMaster_packet_processor(char *packet, int length, uint64_t micro
 	}
 
 	/* read remote checksum */
-	if ( 1 != sscanf(packet+length-2,"%x",&rChecksum) ) {
+	if ( 1 != sscanf(packet+length-2,"%X",&rChecksum) ) {
 		if ( outputDebug ) {
 			printf("(error scanning remote checksum hex)\n");
 		}
@@ -156,9 +146,9 @@ static int _windMaster_packet_processor(char *packet, int length, uint64_t micro
 	}
 
 	struct json_object *jobj;
-//	struct json_object *tmp;
+	struct json_object *tmp;
 
-//	tmp = ( 0 != _WINDMASTER_FORMAT ) ?   do_WINDMASTER_FORMAT(packet) : 0;
+	tmp = ( 0 != _WINDMASTER_FORMAT ) ?   do_WINDMASTER_FORMAT(packet) : 0;
 	jobj = json_object_new_object();
 	if ( 0 == retainedFlag ) {
 		json_object_object_add(jobj,"date",json_object_new_dateTime());
@@ -166,12 +156,10 @@ static int _windMaster_packet_processor(char *packet, int length, uint64_t micro
 		json_object_object_add(jobj,"rawData",json_object_new_string(packet));
 	}
 
-#if 0
 	if ( 0 != tmp ) {
 		json_object_object_add(jobj,"formattedData", tmp);
 		topic = new_topic(packet,( 0 == retainedFlag ) ? mqtt_topic : mqtt_meta_topic);
 	}
-#endif
 
 	// fprintf(stderr,"# %s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
 	rc = serToMQTT_pub(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY),topic);
@@ -187,12 +175,12 @@ enum states {
 
 
 extern uint64_t microtime(); 
-static int  _serial_process(int serialfd) {
+static int  WINDMASTER_serial_process(int serialfd) {
 	int rc = 0;
 	int i,n;
 	uint64_t microtime_now;
 	int milliseconds_since_stx;
-	char buff[32];
+	char buff[64] = {};
 
 
 	static char packet[128];
@@ -200,8 +188,14 @@ static int  _serial_process(int serialfd) {
 	static uint64_t microtime_start=0;
 	static int state=STATE_LOOKING_FOR_STX;
 
+#if 1
 	n = read (serialfd, buff, sizeof(buff));  // read next character if ready
+#else
+	strcpy(buff,"\002Q,,000.01,-000.01,M,00,\00331\r\n");
+	n = strlen(buff);
+#endif
 	microtime_now=microtime();
+	
 
 
 	/* non-blocking, so we will get here if there was no data available */
@@ -212,11 +206,18 @@ static int  _serial_process(int serialfd) {
 		}
 		return rc;
 	}
+	else {
+		if ( outputDebug ) {
+			buff[n] = '\0';
+			fprintf(stderr,"0# %s  \n",buff);
+		}
+	}	
+	
 
 	/* cancel pending alarm */
 	alarm(0);
 	/* set an alarm to send a SIGALARM if data not received within alarmSeconds */
-	alarm(alarmSeconds);
+	// alarm(alarmSeconds);
 
 	milliseconds_since_stx=(int) ((microtime_now-microtime_start)/1000.0);
 
@@ -230,11 +231,12 @@ static int  _serial_process(int serialfd) {
 	/* copy byte to packet */
 	for ( i=0 ; 0 == rc && i<n ; i++ ) {
 		/* look for start character */
-		if ( STATE_LOOKING_FOR_STX == state && STX ==  buff[i] ) {
-			packet_pos=0;
+		if ( /* STATE_LOOKING_FOR_STX == state && */ STX ==  buff[i] ) {
 			microtime_start=microtime_now;
 			state=STATE_IN_PACKET;
 			packet[0]='$';
+			packet_pos=1;
+			continue;
 		}
 
 		if ( STATE_IN_PACKET == state ) {
@@ -252,12 +254,15 @@ static int  _serial_process(int serialfd) {
 				state=STATE_LOOKING_FOR_STX;
 				alarm(0);
 				/* process packet */
-				rc = _windMaster_packet_processor(packet,packet_pos-3,microtime_start,milliseconds_since_stx);
+				rc = _windMaster_packet_processor(packet,packet_pos,microtime_start,milliseconds_since_stx);
+				memset(packet,'\0',packet_pos);
 				microtime_start = 0;
-				break;
+				packet_pos = 0;
+				continue;
 			}
 
 			if ( packet_pos < sizeof(packet)-1 ) {
+				buff[i] = ( ETX == buff[i] ) ? '*' : buff[i];
 				packet[packet_pos]=buff[i];
 				packet_pos++;
 			} else {
@@ -274,6 +279,14 @@ static int  _serial_process(int serialfd) {
 	}
 
 return	rc;
+}
+static struct timeval next_tv;
+static void _set_half_sleep(ANEMOMETER *p ) {
+	if ( 0 == next_tv.tv_sec ) { 
+		next_tv = p->tv;
+	} else if ( (p->tv.tv_sec < next_tv.tv_sec) || ( p->tv.tv_sec == next_tv.tv_sec && p->tv.tv_usec <= next_tv.tv_usec)) {
+		next_tv = p->tv;
+	}
 }
 static void _set_the_new_timer(struct timeval *xv, ANEMOMETER *p ) {
 	struct timeval tv;
@@ -292,25 +305,11 @@ static void _set_the_new_timer(struct timeval *xv, ANEMOMETER *p ) {
 
 	p->tv.tv_sec = tv.tv_sec;
 	p->tv.tv_usec = tv.tv_usec;
+
+	_set_half_sleep(p);
 }
 void do_anemometerCmd( ANEMOMETER *p,int serialfd ) {
-	int lChecksum,length,i;
-	char	buffer[128] = {};
-	snprintf(buffer,sizeof(buffer),"%2.2s,%s",p->listenerID,p->startupCmd);
-	length = strlen(buffer);
-	/* calculate local checksum */
-	lChecksum=0;
-	for ( i=0 ; i<length ; i++ ) {
-		lChecksum = lChecksum ^buffer[i];
-	}
 
-	snprintf(buffer,sizeof(buffer),"$%2.2s,%s*%02X\r\n",p->listenerID,p->startupCmd,lChecksum);
-	write(serialfd,buffer,strlen(buffer));
-
-
-	free(p->startupCmd);
-	p->startupCmd = 0;
-	
 }
 void check_anemometer_intervals(ANEMOMETER *p, int serialfd ) {
 	if ( 0 != p ) {
@@ -318,7 +317,7 @@ void check_anemometer_intervals(ANEMOMETER *p, int serialfd ) {
 		char	buffer[64] = {};
 
 		check_anemometer_intervals(p->left,serialfd);
-		if ( 0 != p->startupCmd ) {
+		if ( 0 != p->pollCmd ) {
 			do_anemometerCmd(p,serialfd);
 		}
 		struct timeval time;
@@ -345,15 +344,60 @@ void check_anemometer_intervals(ANEMOMETER *p, int serialfd ) {
 	}
 }
 
+static int _do_startup( int serialfd ) {
+
+#define PAUSE 2
+
+	char	buffer[64] = {};
+	int	n;
+	do {
+		write(serialfd, "*",1);
+		usleep(500000);
+		alarm(PAUSE);
+		n = read(serialfd,buffer,sizeof(buffer));
+		} while ( n > 0 &&  'C' != buffer[0] && '*' != buffer[0] );
+		
+	if ( 0 >= n ) {
+		fprintf(stderr,"# sent \"*\" return form read %d\n",n);
+		return -1;
+	}
+	if ( 0 != strncmp(buffer,"CONFIGURATION MODE",18) && 0 != strncmp(buffer,"*",1)) {
+		fprintf(stderr,"# sent \"*\" expecting \"CONFIGURATION MODE\" or \"*\"\n# got \"%s\"\n",buffer);
+		return	-2;
+	}
+	write(serialfd, "M1\r\n",4);
+	usleep(500000);
+	alarm(PAUSE);
+	n = read(serialfd,buffer,sizeof(buffer));
+	if ( 0 != strncmp(buffer,"M1",2) ) {
+		return	-3;
+	}
+	write(serialfd, "P8\r\n",4);
+	usleep(500000);
+	alarm(PAUSE);
+	n = read(serialfd,buffer,sizeof(buffer));
+	if ( 0 != strncmp(buffer,"P8",2) ) {
+		return	-3;
+	}
+	
+	write(serialfd, "Q\r\n",3);
+	usleep(500000);
+	return	0;	
+#undef PAUSE
+}
 
 void windMaster_engine(int serialfd,char *special_handling ) {
 	int i;
 	int rc = 0;
 
+	if ( 0 != _do_startup(serialfd) ) {
+		return;
+	}
+		
 
 	set_blocking (serialfd, 1, 0);		// blocking wait for a character
 	/* server socket */
-	fd_set active_fd_set, read_fd_set, write_fd_set;
+	fd_set active_fd_set, read_fd_set;
 
 	FD_ZERO( &active_fd_set);
 
@@ -362,18 +406,18 @@ void windMaster_engine(int serialfd,char *special_handling ) {
 	FD_SET(serialfd, &active_fd_set);
 
 	/* set an alarm to send a SIGALARM if data not received within alarmSeconds */
-	//alarm(alarmSeconds);
+	alarm(alarmSeconds);
 
 
-	if ( 0 == rootStation ) {
-		fprintf(stderr,"# --station   one or more are required.\n");
+	if ( 0 == rootAnemometer ) {
+		fprintf(stderr,"# --anemometer   one or more are required.\n");
 		rc = 1;
 	}
 	for ( ; 0 == rc ; ) {
 		/* Block until input arrives on one or more active sockets. */
-		write_fd_set = read_fd_set = active_fd_set;
+		read_fd_set = active_fd_set;
 
-		i=select(FD_SETSIZE, &read_fd_set, &write_fd_set, NULL, NULL);
+		i=select(FD_SETSIZE, &read_fd_set, NULL, NULL, NULL);
 		if ( EBADF == i ) {
 			fprintf(stderr,"# select() EBADF error. Aborting.\n");
 			exit(1);
@@ -382,12 +426,9 @@ void windMaster_engine(int serialfd,char *special_handling ) {
 			exit(1);
 		} 
 		
-		if ( FD_ISSET(serialfd, &write_fd_set) ) {
-			check_anemometer_intervals(rootStation,serialfd);
-		} 
 
 		if ( FD_ISSET(serialfd, &read_fd_set) ) {
-			rc = _serial_process(serialfd);
+			rc = WINDMASTER_serial_process(serialfd);
 		} 
 	}
 

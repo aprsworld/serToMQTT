@@ -6,6 +6,7 @@ struct json_object *json_int_division(int value,char *description, char *units);
 struct json_object *json_string_division(char * value,char *description, char *units);
 struct json_object *nullValue(void);
 int setDateTimeFromGPS(char *aprsworld_date_time); 
+extern void sleep_half_the_time(void);
 extern int no_meta;
 extern   void set_blocking (int fd, int vmin, int vtime) ;
 extern int serToMQTT_pub(const char *message ,const char *topic );
