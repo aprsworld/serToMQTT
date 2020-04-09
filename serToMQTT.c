@@ -427,7 +427,6 @@ enum arguments {
 	A_mqtt_user_name,
 	A_mqtt_password,
 	A_station,
-	A_anemometer,
 	A_no_meta,
 	A_timeout,
 	A_alarm_no_data_after_start,
@@ -461,7 +460,6 @@ int main(int argc, char **argv) {
 		        {"mqtt-user-name",                   1,                 0, A_mqtt_user_name },
 		        {"mqtt-passwd",                      1,                 0, A_mqtt_password },
 		        {"station",                          1,                 0, A_station },
-		        {"anemometer",                       1,                 0, A_anemometer },
 		        {"timeout",                          1,                 0, A_timeout },
 		        {"alarm-no-data-after-start",        1,                 0, A_alarm_no_data_after_start },
 		        {"sleep-before-startup",             1,                 0, A_sleep_before_startup },
@@ -482,9 +480,6 @@ int main(int argc, char **argv) {
 
 	/* command line arguments */
 		switch (n) {
-			case A_anemometer:
-				do_anemometer(optarg);
-				break;
 			case A_station:
 				do_station(optarg);
 				break;
@@ -567,7 +562,6 @@ int main(int argc, char **argv) {
 				fprintf(stdout,"# --mqtt-passwd\t\t\tmaybe required depending on system\n");
 				fprintf(stdout,"# --protocol\t\t\tprotocol\n");
 				fprintf(stdout,"# --station\t\t\t\"listener=?? talker=?? interval=? [startup=??]\"\n");
-				fprintf(stdout,"# --anemometer\t\t\t\"listener=?? talker=?? interval=? [startup=??]\"\n");
 				fprintf(stdout,"# --alarm-no-data-after-start\tseconds\tTerminate after seconds without data\n");
 				fprintf(stdout,"# --timeout\t\t\tmilliseconds\tTimeout packet after milliseconds since start\n");
 				fprintf(stdout,"# --sleep-before-startup\tseconds\tstartup delay\n");

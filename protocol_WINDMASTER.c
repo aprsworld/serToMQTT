@@ -33,76 +33,8 @@
 #define STX 2
 #define ETX 3
 
-typedef struct station {
-	struct station *left,*right;
-	char *listenerID;	/* set at startup by user */
-	char *pollCmd;	/* set by user */
-	int milliSecondInterval;	/* set at startup by user */
-	struct timeval	tv;
-} ANEMOMETER;
 
-static ANEMOMETER *rootAnemometer;
 
-void installAnemometer( const ANEMOMETER *s ) {
-	if ( 0 == rootAnemometer ) {
-		rootAnemometer = calloc(1,sizeof(ANEMOMETER));
-		*rootAnemometer = *s;
-	}
-	else {
-		ANEMOMETER *p,*q;
-		int ind;
-		p = rootAnemometer;
-		while ( 0 != p ) {
-			ind = strcmp(s->listenerID,p->listenerID);
-			if ( 0 == ind ) {
-				fprintf(stderr,"# listener=%s already in the table.\n",s->listenerID);
-				return;
-			}
-			q = p;
-			if ( ind < 0 ) {
-				p = q->left;
-			}
-			else {
-				p = q->right;
-			}
-		}
-		p = calloc(1,sizeof(ANEMOMETER));
-		*p = *s;
-		if ( ind < 0 ) {
-			q->left = p;
-		}
-		else {
-			q->right = p;
-		}
-	}	
-}
-
-int do_anemometer(const char *cmd ) {
-	/*   cmd format will be "listener=01 talker=WI interval=1500" */
-	int rc=0;
-	char command[256] = {};
-	ANEMOMETER station = {};
-	char *p,*q;
-	strncpy(command,cmd,sizeof(command));
-	q = command;
-
-	while ( 0 != (p = strsep(&q," "))) {
-		if ( 0 == strncmp("listener",p,8)) {
-			if ( 10 != strlen(p) ) {
-				rc = 1;
-			}
-			station.listenerID = strsave(p+9);
-		}
-	}
-	if ( 0 != rc || 0 == station.listenerID ) {
-		fprintf(stderr,"# bad --anemometer\nEpecting \"listener=Q\"\n");
-	}
-	else {
-		installAnemometer(&station);
-	}
-			
-	return	rc;
-}
 
 int _WINDMASTER_FORMAT = 1;
 
@@ -280,120 +212,12 @@ static int  WINDMASTER_serial_process(int serialfd) {
 
 return	rc;
 }
-static struct timeval next_tv;
-static void _set_half_sleep(ANEMOMETER *p ) {
-	if ( 0 == next_tv.tv_sec ) { 
-		next_tv = p->tv;
-	} else if ( (p->tv.tv_sec < next_tv.tv_sec) || ( p->tv.tv_sec == next_tv.tv_sec && p->tv.tv_usec <= next_tv.tv_usec)) {
-		next_tv = p->tv;
-	}
-}
-static void _set_the_new_timer(struct timeval *xv, ANEMOMETER *p ) {
-	struct timeval tv;
 
-	if ( 0 == p->tv.tv_sec ) {
-		tv = *xv;
-	} else {
-		tv = p->tv;
-	}
-	tv.tv_usec += p->milliSecondInterval * 1000;
-	while ( tv.tv_usec > 1000000 ) {
-		tv.tv_sec++;
-		tv.tv_usec -= 1000000;
-	}
-		
-
-	p->tv.tv_sec = tv.tv_sec;
-	p->tv.tv_usec = tv.tv_usec;
-
-	_set_half_sleep(p);
-}
-void do_anemometerCmd( ANEMOMETER *p,int serialfd ) {
-
-}
-void check_anemometer_intervals(ANEMOMETER *p, int serialfd ) {
-	if ( 0 != p ) {
-		int lChecksum,length,i;
-		char	buffer[64] = {};
-
-		check_anemometer_intervals(p->left,serialfd);
-		if ( 0 != p->pollCmd ) {
-			do_anemometerCmd(p,serialfd);
-		}
-		struct timeval time;
-		gettimeofday(&time, NULL); 
-		if ( (time.tv_sec > p->tv.tv_sec  ) || (time.tv_sec == p->tv.tv_sec && time.tv_usec > p->tv.tv_usec)) {
-			_set_the_new_timer(&time,p);
-			snprintf(buffer,sizeof(buffer),"%2.2s,WV?",p->listenerID);
-			length = strlen(buffer);
-			/* calculate local checksum */
-			lChecksum=0;
-			for ( i=0 ; i<length ; i++ ) {
-				lChecksum = lChecksum ^buffer[i];
-			}
-
-		snprintf(buffer,sizeof(buffer),"$%2.2s,WV?*%02X\r\n",p->listenerID,lChecksum);
-		write(serialfd,buffer,strlen(buffer));
-		if ( outputDebug ) {
-			fprintf(stderr,"# %s",buffer);
-			fflush(stderr);
-		}
-
-		check_anemometer_intervals(p->right,serialfd);
-		}
-	}
-}
-
-static int _do_startup( int serialfd ) {
-
-#define PAUSE 2
-
-	char	buffer[64] = {};
-	int	n;
-	do {
-		write(serialfd, "*",1);
-		usleep(500000);
-		alarm(PAUSE);
-		n = read(serialfd,buffer,sizeof(buffer));
-		} while ( n > 0 &&  'C' != buffer[0] && '*' != buffer[0] );
-		
-	if ( 0 >= n ) {
-		fprintf(stderr,"# sent \"*\" return form read %d\n",n);
-		return -1;
-	}
-	if ( 0 != strncmp(buffer,"CONFIGURATION MODE",18) && 0 != strncmp(buffer,"*",1)) {
-		fprintf(stderr,"# sent \"*\" expecting \"CONFIGURATION MODE\" or \"*\"\n# got \"%s\"\n",buffer);
-		return	-2;
-	}
-	write(serialfd, "M1\r\n",4);
-	usleep(500000);
-	alarm(PAUSE);
-	n = read(serialfd,buffer,sizeof(buffer));
-	if ( 0 != strncmp(buffer,"M1",2) ) {
-		return	-3;
-	}
-	write(serialfd, "P8\r\n",4);
-	usleep(500000);
-	alarm(PAUSE);
-	n = read(serialfd,buffer,sizeof(buffer));
-	if ( 0 != strncmp(buffer,"P8",2) ) {
-		return	-3;
-	}
-	
-	write(serialfd, "Q\r\n",3);
-	usleep(500000);
-	return	0;	
-#undef PAUSE
-}
 
 void windMaster_engine(int serialfd,char *special_handling ) {
 	int i;
 	int rc = 0;
 
-	if ( 0 != _do_startup(serialfd) ) {
-		return;
-	}
-		
 
 	set_blocking (serialfd, 1, 0);		// blocking wait for a character
 	/* server socket */
@@ -408,11 +232,6 @@ void windMaster_engine(int serialfd,char *special_handling ) {
 	/* set an alarm to send a SIGALARM if data not received within alarmSeconds */
 	alarm(alarmSeconds);
 
-
-	if ( 0 == rootAnemometer ) {
-		fprintf(stderr,"# --anemometer   one or more are required.\n");
-		rc = 1;
-	}
 	for ( ; 0 == rc ; ) {
 		/* Block until input arrives on one or more active sockets. */
 		read_fd_set = active_fd_set;

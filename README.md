@@ -138,6 +138,38 @@ The defaults of stx='$' and etx=newline are used, and need not be specified.
 --station must be used once but can be used more than once if there are multiple instruments on the same port.   Each talker and listener must be unique.   The interval is in milliseconds and intervals can duplicate.   Optionally there is 'startup=' inside of each --station.   To use NMEA format `--station "talker=WI listener=01 interval=1000 startup=DFN"`.  To use polar format `--station "talker=WI listener=01 interval=1000 startup=DFP"`.  Each station does not have to use the same format.  Remember that you must use something in the shell or script to group all of the station parameters.
 
 
+## WINDMASTER instruments
+
+Command line in the lab looks like:
+
+ ./serToMQTT --protocol windmaster --mqtt-host 192.168.10.80 --mqtt-topic data/006 --input-port=/dev/ttyUSB0 --input-speed=19200 --mqtt-meta-topic meta/006 --quiet
+
+The defaults of stx='\002' and etx='\003' are used, and need not be specified.
+
+### WINDMASTER setup
+
+These devices need to be setup once or when their parameters need to be changed.   To get the device into setup mode:
+
+1.  Make sure that there is only one device attached to the serial bus.
+
+2.  Start up minicom and using `^AZ` enter the setup menu.   Set the port to the desired port.  You may need to use the dmesg command
+to figure this out.   Set the parameters to n81 and the default baud of 19200.   
+
+3.  Press `*` and one of two things will happen.  The words `CONFIGURATION MODE` will apppear or `*` will appear.    You are now in configuration mode.
+
+4.  Enter `M1` and press enter.   `M1` should echo back.   This sets the device so it will return the `M1` message type.
+
+5.  Enter `P8` and press enter.  `P8` should echo back.  This set the sampling rate to 20Hz.
+
+6.  When in running mode if you will have more than one device on the serial bus then you should assign each device a unique ID
+if you want to be able to tell which device the reading came from.    To check the current ID enter `N` and press enter.  It will 
+echo `NQ` or the second letter maybe any letter in the alphabet.   To change the ID to `R` then enter `NR` and press enter.
+
+7.  If #6 above is true then you may need to up the baud rate.  `B6` will set the baud to 57600.   You must then change the setting
+in minicom to 57600 also.   Then Enter `B` and press enter.   All devices on the serial bus need to be at the same baud and parameters.
+
+8.  Enter `Q` and press enter.   A configuration will display and then the device will spew data.
+
 
 # nmea.cmd
 
