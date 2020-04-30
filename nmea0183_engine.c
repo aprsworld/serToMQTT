@@ -101,7 +101,7 @@ json_object_object_add(jobj,"epochMicroseconds",json_object_new_string(buffer));
 json_object_object_add(jobj,"milliSecondSinceStart",json_object_new_int(millisec_since_start));
 json_object_object_add(jobj,"rawData",json_object_new_string(packet));
 
-fprintf(stderr,"# %s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
+fprintf(S_Stderr,"# %s\n", json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY));
 json_object_put(jobj);
 
 }
@@ -214,7 +214,7 @@ else if ( 0 == strcmp(p,"etx"))
 	local_etx = q[0];
 else
 	{
-	fprintf(stderr,"# -M option '%s' not supported.\n",s);
+	fprintf(S_Stderr,"# -M option '%s' not supported.\n",s);
 	exit(1);
 	}
 }
@@ -255,10 +255,10 @@ void nmea0183_engine(int serialfd,char *special_handling ) {
 
 		i=select(FD_SETSIZE, &read_fd_set, NULL, NULL, NULL);
 		if ( EBADF == i ) {
-			fprintf(stderr,"# select() EBADF error. Aborting.\n");
+			fprintf(S_Stderr,"# select() EBADF error. Aborting.\n");
 			exit(1);
 		} else if ( ENOMEM == i ) {
-			fprintf(stderr,"# select() ENOMEM error. Aborting.\n");
+			fprintf(S_Stderr,"# select() ENOMEM error. Aborting.\n");
 			exit(1);
 		} 
 

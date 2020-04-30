@@ -34,6 +34,8 @@ text|text that has a format stx payload ext
 
  `./serToMQTT --mqtt-topic /toStation/A2744 --protocol text -mqtt-host localhost --input-port /dev/ttyUSB0 --input-speed 57600 --special-handling "stx=X etx=0x0d format=XQ" -t 1024`
 
+`./serToMQTT --protocol loadstar --mqtt-host 192.168.10.80 --mqtt-topic left --input-port /dev/ttyUSB2 --input-speed 230400 --quiet --mqtt-meta-topic meta-left`
+
 ## Command line switches
 
 switch|Required/Optional|argument|description
@@ -170,6 +172,40 @@ in minicom to 57600 also.   Then Enter `B` and press enter.   All devices on the
 
 8.  Enter `Q` and press enter.   A configuration will display and then the device will spew data.
 
+## LOADSTAR instruments
+
+Command line in the lab looks like:
+
+./serToMQTT --protocol loadstar --mqtt-host 192.168.10.80 --mqtt-topic left --input-port /dev/ttyUSB2 --input-speed 230400 --quiet --mqtt-meta-topic meta-left
+
+STX and ETX are built in and if specified on the command line will be ignored.
+
+### LOADSTAR setup
+
+These devices need to be setup once or when their parameters need to be changed.   To get the device into setup mode:
+
+1.  Start up minicom and using `^AZ` enter the setup menu.   Set the port to the desired port.  You may need to use the dmesg command
+to figure this out.   Set the parameters to n81 and the default baud of 230400.   
+
+2.  Press enter.  An 'A' or 'E' will appear.  By default the device is not in continuous mode.
+
+3.  Enter `UNIT LB` for punds, or `UNIT KG` for Kilograms, or `UNIT N` for Newtons.   All inputs/outputs after this will be in the 
+unit selected.
+
+4.  To check your work enter `UNIT`.
+
+5.  To calibrate you must read the fine manual.
+
+6.  To set the sampling rate enter `SPS`.   This will report back the current sampling rate.  Slower rates produce more accuracy.
+  Sampling rates are 7.5, 15, 30, 60, 120, 240, 480, 960, 1920, 3840. Factory default is 120.  These are SamplesPerSecond or Hz.
+
+7.  To see the current value on the device enter `W`.   If this is not correct then you must read the fine manual.  
+
+8.  To see the stream of data at the sampling rate enter `WC`.   Data will be written to the screen at the rate selected.
+
+9.  To exit minicom enter `^AQ`.
+
+10.  When all else fails read the fine manual.
 
 # nmea.cmd
 

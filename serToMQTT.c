@@ -31,6 +31,7 @@
 
 static int mqtt_port=1883;
 static char mqtt_host[256];
+static char pid_filename[256];
 char mqtt_topic[256];
 char mqtt_meta_topic[256];
 static char *mqtt_user_name,*mqtt_passwd;
@@ -51,11 +52,20 @@ int alarmSeconds=5;
 int no_meta;
 int retainedFlag;
 
+FILE *stdout;
+FILE *stderr;
+
+
 typedef struct {
 	char *label;
 	void (*packet_processor_func)(int serialfd,char *special_handling );
 	}	MODES;
 
+void pid_filename_cleanup() {
+	if ( 0 != pid_filename[0] ) {
+		unlink(pid_filename);
+	}
+}
 uint64_t microtime() {
 	struct timeval time;
 	gettimeofday(&time, NULL); 
@@ -117,11 +127,13 @@ static void signal_handler(int signum) {
 		fprintf(stderr,"\n# Timeout while waiting for NMEA data.\n");
 		fprintf(stderr,"# Terminating.\n");
 		_mosquitto_shutdown();
+		pid_filename_cleanup();
 		exit(100);
 	} else if ( SIGPIPE == signum ) {
 		fprintf(stderr,"\n# Broken pipe.\n");
 		fprintf(stderr,"# Terminating.\n");
 		_mosquitto_shutdown();
+		pid_filename_cleanup();
 		exit(101);
 	} else if ( SIGUSR1 == signum ) {
 		/* clear signal */
@@ -134,11 +146,13 @@ static void signal_handler(int signum) {
 	} else if ( SIGTERM == signum ) {
 		fprintf(stderr,"# Terminating.\n");
 		_mosquitto_shutdown();
+		pid_filename_cleanup();
 		exit(0);
 	} else {
 		fprintf(stderr,"\n# Caught unexpected signal %d.\n",signum);
 		fprintf(stderr,"# Terminating.\n");
 		_mosquitto_shutdown();
+		pid_filename_cleanup();
 		exit(102);
 	}
 
@@ -243,11 +257,17 @@ void windMaster_packet_processor(int serialfd,char *special_handling ) {
 	windMaster_engine(serialfd,special_handling);
 	/* this is a wrapper for the actual function in protocol_WINDMASTER.c */
 }
+void loadStar_packet_processor(int serialfd,char *special_handling ) {
+	extern void loadStar_engine(int serialfd,char *special_handling );
+	loadStar_engine(serialfd,special_handling);
+	/* this is a wrapper for the actual function in protocol_WINDMASTER.c */
+}
 static MODES modes[] = {
 	{"text",text_packet_processor},
 	{"nmea0183",nmea0183_packet_processor},
 	{"fl702lt",fl702lt_packet_processor},
 	{"windmaster",windMaster_packet_processor},
+	{"loadstar",loadStar_packet_processor},
 	{},	/* sentinnel */
 };
 
@@ -436,6 +456,23 @@ enum arguments {
 	A_help,
 };
 
+static int write_pid_file( const char *name ) {
+	char	buffer[256];
+	strncpy(buffer,name,sizeof(buffer));
+	char *path = basename(buffer);
+	snprintf(pid_filename,sizeof(pid_filename),"/tmp/%s.pid",path);
+	FILE	*out = fopen(pid_filename,"w");
+	if ( 0 == out ) {
+		fprintf(stderr,"# cannot create %s\n",pid_filename);
+		return	-1;
+	}
+	fprintf(out,"%d\n",getpid());
+	fclose(out);
+	return	0;
+}
+
+
+
 int main(int argc, char **argv) {
 	char portname[128] = "/dev/ttyAMA0";
 	int serialfd;
@@ -443,6 +480,9 @@ int main(int argc, char **argv) {
 	int _baud = B4800;
 	MODES *_mode = 0;
 	char *_M = 0;
+
+	stdout = stdout;
+	stderr = stderr;
 
 	while (1) {
 		// int this_option_optind = optind ? optind : 1;
@@ -610,6 +650,11 @@ int main(int argc, char **argv) {
 		exit(1);
 	}	
 
+	if ( write_pid_file(portname)) {
+		exit(1);
+	}
+
+
 	set_interface_attribs (serialfd, _baud, 0);  /* set speed to default or -b baud  bps, 8n1 (no parity) */
 	set_blocking (serialfd, 0, 0);		/* blocking with 0 second timeout.  this will be re-set in the mode */
 
@@ -621,6 +666,8 @@ int main(int argc, char **argv) {
 	if ( 0 == disable_mqtt_output ) {
 		_mosquitto_shutdown();
 	}
+
+	pid_filename_cleanup();
 
 	return	0;
 }
