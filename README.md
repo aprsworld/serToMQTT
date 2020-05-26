@@ -23,8 +23,13 @@ publishes to mqtt on a topic
 
 protocol id|description
 ---|---
-NMEA0183| NMEA0183 protocol
+NMEA0183|NMEA0183 protocol
 text|text that has a format stx payload ext
+fl702lt|one or more wx stations on a single port,
+windmaster|Gil Windmaster
+loadstar|LoadStar load cell.   Just outputs a series of numbers
+yost|polls a Yost 3-space sensor and report angle of inclination
+
 
 ## Examples 
 
@@ -206,6 +211,17 @@ unit selected.
 9.  To exit minicom enter `^AQ`.
 
 10.  When all else fails read the fine manual.
+
+## YOST
+
+Command line in the lab looks like:
+
+`./serToMQTT --mqtt-host localhost --mqtt-topic Yost --protocol yost --input-port /dev/ttyACM0 --input-speed 115200 --special-handling hertz=20`
+
+You do not need to know how to program a yost.  As long as you have the --input-port and --input-speed then this software makes
+sure the device is in polling mode and polls the device for the corrected 3-axis accellerometer.  The defaulti polling rate is 
+10 Hertz.  Higher or lower rates can be set by using --special-handling hertz=40.   
+
 
 # nmea.cmd
 
