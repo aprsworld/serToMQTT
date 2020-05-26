@@ -83,7 +83,7 @@ struct json_object *json_division(double value,char *description, char *units) {
 	struct json_object *jobj = json_object_new_object();
 	if ( 0 == retainedFlag ) {
 		if ( isnan(value )) {
-			json_object_object_add(jobj,"value",nullValue());
+			json_object_object_add(jobj,"value",NULL);
 		} else {
 			json_object_object_add(jobj,"value",json_object_new_double(value));
 		}
@@ -404,7 +404,7 @@ int serToMQTT_pub(const char *message, const char *topic  ) {
 
 		static int messageID;
 		/* instance, message ID pointer, topic, data length, data, qos, retain */
-		rc = mosquitto_publish(mosq, &messageID, topic, strlen(message), message, 0, retainedFlag ); 
+		rc = mosquitto_publish(mosq, &messageID, topic, strlen(message), message, 2, retainedFlag ); 
 		retainedFlag = 0; /* default is off */
 
 
