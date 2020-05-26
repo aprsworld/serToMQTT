@@ -35,6 +35,7 @@
 
 
 int _LOADSTAR_FORMAT = 1;
+static int highSpeedFlag = 1;
 static int loadStarSamplesPerSecond;
 static char loadStarUNIT[16];
 
@@ -57,7 +58,9 @@ static int _loadStar_packet_processor(char *packet, int length, uint64_t microti
 	tmp = ( 0 != _LOADSTAR_FORMAT ) ?   do_LOADSTAR_FORMAT(packet) : 0;
 	jobj = json_object_new_object();
 	if ( 0 == retainedFlag ) {
+		static int count;
 		json_object_object_add(jobj,"date",json_object_new_dateTime());
+		json_object_object_add(jobj,"packetCount",json_object_new_int(++count));
 		json_object_object_add(jobj,"milliSecondSinceStart",json_object_new_int(millisec_since_start));
 		json_object_object_add(jobj,"rawData",json_object_new_string(packet));
 	}
@@ -75,12 +78,35 @@ static int _loadStar_packet_processor(char *packet, int length, uint64_t microti
 }
 
 enum states {
-	STATE_LOOKING_FOR_STX,
+	STATE_LOOKING_FOR_STX = 1,
 	STATE_IN_PACKET,
 };
 
 
 extern uint64_t microtime(); 
+
+void highSpeedFlagSerial_process(int fd ) {
+	FILE *in = fdopen(fd,"r");
+	if ( 0 == in ) {
+		return	;
+	}
+	char buffer[64] = {};
+	uint64_t microtime_now,microtime_start;
+	int milliseconds_since_stx;
+	int rc;
+
+	microtime_start = microtime_now=microtime();
+	milliseconds_since_stx = 0;
+
+	while ( 0 != fgets(buffer,sizeof(buffer),in)) {
+		milliseconds_since_stx=(int) ((microtime_now-microtime_start)/1000.0);
+		rc = _loadStar_packet_processor(buffer,strlen(buffer),microtime_start,milliseconds_since_stx);
+		microtime_start = microtime_now=microtime();
+		milliseconds_since_stx = 0;
+	}
+		
+
+}
 static int  LOADSTAR_serial_process(int serialfd) {
 	int rc = 0;
 	int i,n;
@@ -92,10 +118,16 @@ static int  LOADSTAR_serial_process(int serialfd) {
 	static char packet[128];
 	static int packet_pos=0;
 	static uint64_t microtime_start=0;
-	static int state=STATE_LOOKING_FOR_STX;
+	static enum states state = STATE_LOOKING_FOR_STX;
 
-	//n = read (serialfd, buff, sizeof(buff));  // read next character if ready
-	n = read (serialfd, buff, 5);  // read next character if ready
+	if ( highSpeedFlag ) {
+		highSpeedFlagSerial_process(serialfd);
+		return	0;
+	}
+
+	n = read (serialfd, buff, sizeof(buff));  // read next character if ready
+	printf("# %d charactrers read.\n",n);  fflush(stdout);
+	// n = read (serialfd, buff, 1);  // read next character if ready
 	microtime_now=microtime();
 	
 
@@ -133,7 +165,8 @@ static int  LOADSTAR_serial_process(int serialfd) {
 	/* copy byte to packet */
 	for ( i=0 ; 0 == rc && i<n ; i++ ) {
 		/* look for start character */
-		if (  STATE_LOOKING_FOR_STX == state &&  '\r' !=  buff[i] && '\n' != buff[i] ) {
+		if (  STATE_LOOKING_FOR_STX == state &&  '\r' !=  buff[i] && '\n' != buff[i]  && ' ' == buff[i]) {
+			microtime_now=microtime();
 			microtime_start=microtime_now;
 			state=STATE_IN_PACKET;
 			packet[0]=buff[i];
@@ -155,14 +188,18 @@ static int  LOADSTAR_serial_process(int serialfd) {
 			if (  '\r' == buff[i] ||   '\n' == buff[i] ) {
 				state=STATE_LOOKING_FOR_STX;
 				alarm(0);
+				milliseconds_since_stx=(int) ((microtime_now-microtime_start)/1000.0);
 				/* process packet */
-				rc = _loadStar_packet_processor(packet,packet_pos,microtime_start,milliseconds_since_stx);
+				if ( 0 != packet_pos ) {
+					rc = _loadStar_packet_processor(packet,packet_pos,microtime_start,milliseconds_since_stx);
+				}
 				memset(packet,'\0',sizeof(packet));
 				packet_pos = 0;
 				microtime_start = 0;
 				microtime_now=microtime();
 				milliseconds_since_stx=(int) ((microtime_now-microtime_start)/1000.0);
-				continue;
+				//continue;
+				break;
 			}
 
 			if ( packet_pos < sizeof(packet)-1 ) {

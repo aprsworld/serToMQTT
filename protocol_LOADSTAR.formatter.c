@@ -23,7 +23,7 @@ static struct json_object *_WC( char *s ) {
 	strncpy(buffer,s,sizeof(buffer));
 
 	json_object_object_add(jobj,"messageType",json_object_new_string("WC"));
-	snprintf(sps,sizeof(sps),"%d SamplesPerSecond",loadStarSamplesPerSecond);
+	snprintf(sps,sizeof(sps),"WEIGHT @ %d Hz",loadStarSamplesPerSecond);
 	json_object_object_add(jobj,"WeighContinuous",
 		json_division(_atof(s),sps,loadStarUNIT));
 	return jobj;
