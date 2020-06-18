@@ -262,12 +262,18 @@ void loadStar_packet_processor(int serialfd,char *special_handling ) {
 	loadStar_engine(serialfd,special_handling);
 	/* this is a wrapper for the actual function in protocol_WINDMASTER.c */
 }
+void yost_packet_processor(int serialfd,char *special_handling ) {
+	extern void yost_engine(int serialfd,char *special_handling );
+	yost_engine(serialfd,special_handling);
+	/* this is a wrapper for the actual function in protocol_WINDMASTER.c */
+}
 static MODES modes[] = {
 	{"text",text_packet_processor},
 	{"nmea0183",nmea0183_packet_processor},
 	{"fl702lt",fl702lt_packet_processor},
 	{"windmaster",windMaster_packet_processor},
 	{"loadstar",loadStar_packet_processor},
+	{"yost",yost_packet_processor},
 	{},	/* sentinnel */
 };
 
@@ -553,6 +559,7 @@ int main(int argc, char **argv) {
 				break;
 			case A_special_handling:	/* overRide mode paraments */
 				_M = strsave(optarg);
+				fprintf(stderr,"# --secial-handling '%s'\n",_M);
 				break;
 			case A_protocol:	/* set the mode of operation */
 				set_mode(&_mode,optarg);
@@ -593,7 +600,7 @@ int main(int argc, char **argv) {
 			case A_help:
 				fprintf(stdout,"# --no-meta\t\t\tdisable meta-data output\n");
 				fprintf(stdout,"# --disable-mqtt\t\tdisable mqtt output\n");
-				fprintf(stdout,"# --special-handing\t\tmode or protocol special handling\n");
+				fprintf(stdout,"# --special-handling\t\tmode or protocol special handling\n");
 				fprintf(stdout,"# --mqtt-topic\t\t\tmqtt topic\n");
 				fprintf(stdout,"# --mqtt-meta-topic\t\t\tmqtt meta topic\n");
 				fprintf(stdout,"# --mqtt-host\t\t\tmqtt host\n");

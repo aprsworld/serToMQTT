@@ -265,7 +265,7 @@ static void _do_command( char * s)
 	} else if ( 0 == strcmp(p,"format")) {
 		_do_format(q);
 	} else {
-		fprintf(stderr,"# -M option '%s' not supported.\n",s);
+		fprintf(stderr,"# --special-handling option '%s' not supported.\n",s);
 		exit(1);
 	}
 }
