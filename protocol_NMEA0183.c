@@ -246,7 +246,7 @@ static void _do_command( char * s) {
 	} else if ( 0 == strcmp(p,"setTimeIntervalCount")) {
 		setTimeIntervalCount = atoi(q);
 	} else {
-	fprintf(stderr,"# -M option '%s' not supported.\n",s);
+	fprintf(stderr,"# --special-handling option '%s' not supported.\n",s);
 	fprintf(stderr,"# [stx, ext ,format ,setTimeStartupCount ,setTimeIntervalCount ]\n");
 	exit(1);
 	}

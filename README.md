@@ -203,6 +203,9 @@ unit selected.
 
 6.  To set the sampling rate enter `SPS`.   This will report back the current sampling rate.  Slower rates produce more accuracy.
   Sampling rates are 7.5, 15, 30, 60, 120, 240, 480, 960, 1920, 3840. Factory default is 120.  These are SamplesPerSecond or Hz.
+The current version that we have cannot adjust the sampling rate.   It will appear to work but when you turn on WC it still goes
+fast.   This tends to saturate the network.   You can use --special-handling hertz=4.  You can use any positive number but the
+upper limit is what the exquipment puts out.   Choosing super big numbers is meaningless. 
 
 7.  To see the current value on the device enter `W`.   If this is not correct then you must read the fine manual.  
 

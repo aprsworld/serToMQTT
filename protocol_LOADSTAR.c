@@ -25,6 +25,7 @@
 #include <json.h>
 #include "serToMQTT.h"
 #include <ctype.h>
+#include <stdbool.h>
 
 /* STX is the start of the record.   ETX is the end of the paylocal   crlf is end of record */
 /* checksum immediately follows EYX and is immediately followed by crlf */
@@ -38,17 +39,63 @@ int _LOADSTAR_FORMAT = 1;
 static int highSpeedFlag = 1;
 static int loadStarSamplesPerSecond;
 static char loadStarUNIT[16];
+static int _hertz;
 
 #include "protocol_LOADSTAR.formatter.c"
 
+static int _next_hertz(struct timeval *real_time, struct timeval *trigger_time ) {
+        static uint64_t hertz_interval ;
+
+        if ( 0 == hertz_interval ) {
+                hertz_interval =  ((uint64_t)1000000/_hertz);
+        }
+
+
+        if ( 0  == trigger_time->tv_sec ) {
+                trigger_time->tv_sec = real_time->tv_sec +1;    /* start at the next second */
+                trigger_time->tv_usec = 0;
+                return true;
+        }
+
+        uint64_t t1,t2;
+        t1 = ((uint64_t)real_time->tv_sec * 1000000) + real_time->tv_usec;
+        t2 = ((uint64_t)trigger_time->tv_sec * 1000000) + trigger_time->tv_usec;
+        if ( t1 < t2 ) {
+                return  true;
+        }
+        /*   we are triggered */
+        if ( 1 == _hertz ) {
+                while ( t1 > t2 ) {
+                        trigger_time->tv_sec++;
+                        t2 = ((uint64_t)trigger_time->tv_sec * 1000000) + trigger_time->tv_usec;
+                }
+        }
+        else {
+                t2 += hertz_interval;
+                trigger_time->tv_sec = t2 / 1000000;
+                trigger_time->tv_usec = t2 % 1000000;
+        }
+
+        return  false;  /* we have been triggered. */
+
+}
 static int _loadStar_packet_processor(char *packet, int length, uint64_t microtime_start, int millisec_since_start) {
 	int rc = 0;
 	const char	*topic = mqtt_topic;
+	struct timeval time;
+	static struct timeval hertz_tv;
+
 
 	/* quick sanity check */
 	if ( length < 7 )
 		return rc;
 
+	if ( 0 < _hertz ) {
+		gettimeofday(&time, NULL);
+		if  ( true == _next_hertz(&time,&hertz_tv)) {
+			return	rc;	/* ignore this packet.  too high of packet rate */
+		}
+	}
 	/* null terminate so we can use string functions going forwards */
 	packet[length]='\0';
 
@@ -294,9 +341,41 @@ static void _set_continuous( int fd ) {
 	write(fd,"WC\r\n",4);	/* weigh continuous */
 	usleep(100000);
 }
+static void _do_command( char * s) {
+	/* s contains one command of the type  $cmd=$parameter */
+	char	buffer[256] = {};
+	char	*p,*q;
+
+	strncpy(buffer,s,sizeof(buffer) - 1);
+
+	q= buffer;
+	p = strsep(&q,"=");
+	/* p is the command and q is the paramenter */
+	if ( 0 == strcmp(p,"hertz")) {
+		_hertz = atoi(q);
+	} else {
+	fprintf(stderr,"# --special-handling option '%s' not supported.\n",s);
+	fprintf(stderr,"# [hertz]\n");
+	exit(1);
+	}
+}
+static void _overRide(char *s )
+{
+/*  s can contain commands of the type  $cmd=$parameter with one or more commands sepearted by whitespace */
+char	buffer[256] = {};
+char	*p,*q;
+
+strncpy(buffer,s,sizeof(buffer) - 1);
+
+q= buffer;
+while ( (p = strsep(&q," \t\n\r")) && ('\0' != p[0]) )	// this will find zero or more commands
+	_do_command(p);
+}
 void loadStar_engine(int serialfd,char *special_handling ) {
 	int i;
 	int rc = 0;
+
+	_overRide(special_handling);
 
 	if ( _get_sampling_rate(serialfd)) {
 		exit(1);

@@ -214,7 +214,7 @@ else if ( 0 == strcmp(p,"etx"))
 	local_etx = q[0];
 else
 	{
-	fprintf(S_Stderr,"# -M option '%s' not supported.\n",s);
+	fprintf(S_Stderr,"# --special-handling option '%s' not supported.\n",s);
 	exit(1);
 	}
 }
