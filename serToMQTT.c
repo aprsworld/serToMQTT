@@ -267,6 +267,11 @@ void yost_packet_processor(int serialfd,char *special_handling ) {
 	yost_engine(serialfd,special_handling);
 	/* this is a wrapper for the actual function in protocol_WINDMASTER.c */
 }
+void _WorldData_packet_processor(int serialfd,char *special_handling ) {
+	extern void WorldData_engine(int serialfd,char *special_handling );
+	WorldData_engine(serialfd,special_handling);
+	/* this is a wrapper for the actual function in protocol_WINDMASTER.c */
+}
 static MODES modes[] = {
 	{"text",text_packet_processor},
 	{"nmea0183",nmea0183_packet_processor},
@@ -274,6 +279,7 @@ static MODES modes[] = {
 	{"windmaster",windMaster_packet_processor},
 	{"loadstar",loadStar_packet_processor},
 	{"yost",yost_packet_processor},
+	{"worlddata",_WorldData_packet_processor},
 	{},	/* sentinnel */
 };
 
