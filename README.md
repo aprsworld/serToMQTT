@@ -236,6 +236,7 @@ sure the device is in polling mode and polls the device for the corrected 3-axis
 WorldData requires the use of `--special-handling` because there are several different formats for WorldData.
 
 format|description
+---|---
 XRW2G|The XBee, RS-232, and USB versions of the XRW2G module.
 
 # nmea.cmd
