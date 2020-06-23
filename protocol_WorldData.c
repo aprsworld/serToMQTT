@@ -91,6 +91,7 @@ int16_t crc_chk(int8_t *data, int8_t length) {
 #if 0
 void debug_crc(uint8_t *packet, int length) {
 
+	fprintf(stderr,"length=%d\n",length);
 	fprintf(stderr,"0x%04x\n",_crc_chk(packet+1,length - 3));
 
 	int rChecksum = packet[length -2 ];
@@ -113,7 +114,7 @@ int WorldData_packet_processor(uint8_t *packet, int length, uint64_t microtime_s
 	/* null terminate so we can use string functions going forwards */
 	packet[length]='\0';
 
-	//debug_crc(packet,length);
+	// debug_crc(packet,length);
 	
 	/* calculate local checksum */
 	lChecksum = _crc_chk(packet+1,length - 3);
@@ -187,14 +188,11 @@ static int  _serial_process(int serialfd) {
 		}
 		return rc;
 	}
-	if ( '#' == buff[0] ) {
-		fprintf(stderr," # %c\n",buff[0]);
-	}
 
 	/* cancel pending alarm */
 	alarm(0);
 	/* set an alarm to send a SIGALARM if data not received within alarmSeconds */
-	// alarm(alarmSeconds);
+	alarm(alarmSeconds);
 
 	milliseconds_since_stx=(int) ((microtime_now-microtime_start)/1000.0);
 
@@ -220,11 +218,14 @@ static int  _serial_process(int serialfd) {
 			packet[0]=local_stx;
 			continue;
 		}
-#if 0
-		if ( 5 < packet_pos  &&  _PACKET_TYPE != packet[5] ){
+#if 1
+		if ( 6 == packet_pos  &&  _PACKET_TYPE != packet[5] ){
 			packet_pos=0;
 			state=STATE_LOOKING_FOR_STX;
 			alarm(0);
+			if ( outputDebug ) {
+				fprintf(stderr,"# wrong PACKET_TYPE\n");
+			}
 			continue;
 		}
 #endif
@@ -237,16 +238,16 @@ static int  _serial_process(int serialfd) {
 			break;
 		}
 
-#if 0
-			if ( milliseconds_since_stx > milliseconds_timeout ) {
-				packet_pos=0;
-				state=STATE_LOOKING_FOR_STX;
+#if 1
+		if ( STATE_IN_PACKET == state && milliseconds_since_stx > milliseconds_timeout ) {
+			packet_pos=0;
+			state=STATE_LOOKING_FOR_STX;
 
-				if ( outputDebug ) {
-					printf("(timeout while reading NMEA sentence)\n");
-				}
-				continue;
+			if ( outputDebug ) {
+				printf("(timeout while reading WorldData)\n");
 			}
+			continue;
+		}
 #endif
 	
 
@@ -258,7 +259,7 @@ return	rc;
 }
 static void _do_format(char *s ) {
 	if ( 0 == strcmp(s,"XRW2G" )) {
-		_PACKET_TYPE = 14;
+		_PACKET_TYPE = 23;
 		_PACKET_LENGTH = 98;	
 	} else {
 		fprintf(stderr,"# Bad format %s\n",s);

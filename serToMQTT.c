@@ -562,6 +562,7 @@ int main(int argc, char **argv) {
 				break;
 			case A_input_speed:
 				_do_speed(&_baud,optarg);
+				fprintf(stderr,"# --input-speed=%s\n",optarg);
 				break;
 			case A_special_handling:	/* overRide mode paraments */
 				_M = strsave(optarg);
@@ -593,15 +594,15 @@ int main(int argc, char **argv) {
 			case A_input_port:
 				strncpy(portname,optarg,sizeof(portname));
 				portname[sizeof(portname)-1]='\0';
-				fprintf(stderr,"# serial port = %s\n",portname);
+				fprintf(stderr,"# --input-port = %s\n",portname);
 				break;
 			case A_verbose:
 				outputDebug=1;
-				fprintf(stderr,"# verbose (debugging) output to stderr enabled\n");
+				fprintf(stderr,"# --verbose (debugging) output to stderr enabled\n");
 				break;
 			case A_quiet:
 				quiet_flag = 1;
-				fprintf(stderr,"# quiet no output packets to standard out\n");
+				fprintf(stderr,"# --quiet no output packets to standard out\n");
 				break;
 			case A_help:
 				fprintf(stdout,"# --no-meta\t\t\tdisable meta-data output\n");
@@ -643,6 +644,10 @@ int main(int argc, char **argv) {
 	} else {
 		fprintf(stderr,"# --mqtt_topic=%s\n",mqtt_topic);
 	}
+	if ( 0 == disable_mqtt_output && ' ' < mqtt_meta_topic[0] ) {
+		fprintf(stderr,"# --mqtt_meta_topic=%s\n",mqtt_meta_topic);
+	}
+
 
 	if ( 0 == disable_mqtt_output && 0 == _mosquitto_startup() ) {
 		return	1;

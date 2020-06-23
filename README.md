@@ -29,6 +29,7 @@ fl702lt|one or more wx stations on a single port,
 windmaster|Gil Windmaster
 loadstar|LoadStar load cell.   Just outputs a series of numbers
 yost|polls a Yost 3-space sensor and report angle of inclination
+worlddata|interface to any device that uses a port with WorldData formats.
 
 
 ## Examples 
@@ -41,12 +42,14 @@ yost|polls a Yost 3-space sensor and report angle of inclination
 
 `./serToMQTT --protocol loadstar --mqtt-host 192.168.10.80 --mqtt-topic left --input-port /dev/ttyUSB2 --input-speed 230400 --quiet --mqtt-meta-topic meta-left`
 
+`./serToMQTT --mqtt-host 192.168.10.221 --mqtt-topic World_Data --protocol worlddata --input-port /dev/ttyUSB3 --input-speed 9600 --special-handling format=XRW2G --mqtt-meta-topic Meta_World_Data --quiet`
+
 ## Command line switches
 
 switch|Required/Optional|argument|description
 ---|---|---|---
 --mqtt-topic|REQUIRED|topic|mqtt topic
---mqtt-neta-topic|OPTIONAL|topic|mqtt meta-topic
+--mqtt-meta-topic|OPTIONAL|topic|mqtt meta-topic
 --mqtt-protocol|REQUIRED|see above|protocol id 
 --mqtt-host|REQUIRED|qualified host|mqtt host operating mqtt server
 --input-port|REQUIRED|full path to device|input serial port
@@ -225,6 +228,15 @@ You do not need to know how to program a yost.  As long as you have the --input-
 sure the device is in polling mode and polls the device for the corrected 3-axis accellerometer.  The defaulti polling rate is 
 10 Hertz.  Higher or lower rates can be set by using --special-handling hertz=40.   
 
+## WorldData
+
+`./serToMQTT --mqtt-host 192.168.10.221 --mqtt-topic World_Data --protocol worlddata --input-port /dev/ttyUSB3 --input-speed 9600 --special-handling format=XRW2G --mqtt-meta-topic Meta_World_Data --quiet`
+
+
+WorldData requires the use of `--special-handling` because there are several different formats for WorldData.
+
+format|description
+XRW2G|The XBee, RS-232, and USB versions of the XRW2G module.
 
 # nmea.cmd
 
