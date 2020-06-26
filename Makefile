@@ -43,5 +43,8 @@ backToJson: backToJson.c protocol_NMEA0183.formatter.c
 nmea.cmd: nmea.cmd.c
 	$(CC) nmea.cmd.c  -o nmea.cmd 
 
+x: x.c jsonToAPCALC.c
+	$(CC) x.c jsonToAPCALC.c -o x  $(CFLAGS)  -ljson-c -I/usr/include/json-c/
+
 clean:
 	rm -f *.o 
