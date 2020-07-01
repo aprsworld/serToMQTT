@@ -79,20 +79,6 @@ struct json_object *nullValue(void) {
 	}
 	return	jobj;
 }
-struct json_object *json_division(double value,char *description, char *units) {
-	struct json_object *jobj = json_object_new_object();
-	if ( 0 == retainedFlag ) {
-		if ( isnan(value )) {
-			json_object_object_add(jobj,"value",NULL);
-		} else {
-			json_object_object_add(jobj,"value",json_object_new_double(value));
-		}
-	} else {
-		json_object_object_add(jobj,"description",json_object_new_string(description));
-		json_object_object_add(jobj,"units",json_object_new_string(units));
-	}
-	return	jobj;
-}
 
 
 json_object *json_object_new_dateTime(void) {

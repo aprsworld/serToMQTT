@@ -1,15 +1,19 @@
 CC=gcc
-CFLAGS=-I/usr/include/-I. -Wunused-function  -Wunused-variable -g
+CFLAGS=-I./json-c-0.14 -I/usr/include/ -I. -Wunused-function  -Wunused-variable -g
+LDFLAGS=-Ljson-c-build
 
 serToMQTT: serToMQTT.o protocol_text.o protocol_NMEA0183.o setDateTimeFromGPS.o protocol_FL702LT.o protocol_WINDMASTER.o \
-	protocol_LOADSTAR.o protocol_YOST.o protocol_WorldData.o
+	protocol_LOADSTAR.o protocol_YOST.o protocol_WorldData.o json_division.o
 	$(CC) serToMQTT.o  protocol_text.o protocol_NMEA0183.o setDateTimeFromGPS.o \
 	protocol_FL702LT.o protocol_WINDMASTER.o protocol_LOADSTAR.o protocol_YOST.o \
-	protocol_WorldData.o \
+	protocol_WorldData.o json_division.o \
 	-o serToMQTT $(CFLAGS)  -lm -ljson-c -lmosquitto 
 
 serToMQTT.o: serToMQTT.c serToMQTT.h
 	$(CC)  -c serToMQTT.c  $(CFLAGS) -I/usr/include/json-c/ 
+
+json_division.o: json_division.c 
+	$(CC)  -c json_division.c  $(CFLAGS) -I/usr/include/json-c/ 
 
 protocol_text.o: protocol_text.c serToMQTT.h \
 	protocol_text_iMet_XQ2.c protocol_text_TriSoncica_Mini.c
@@ -43,8 +47,8 @@ backToJson: backToJson.c protocol_NMEA0183.formatter.c
 nmea.cmd: nmea.cmd.c
 	$(CC) nmea.cmd.c  -o nmea.cmd 
 
-x: x.c jsonToAPCALC.c
-	$(CC) x.c jsonToAPCALC.c -o x  $(CFLAGS)  -ljson-c -I/usr/include/json-c/
+x: x.c jsonToAPCALC.c json_division.o
+	$(CC) x.c jsonToAPCALC.c -o x  json_division.o $(CFLAGS) $(LDFLAGS) -ljson-c -I/usr/include/json-c/
 
 clean:
 	rm -f *.o 

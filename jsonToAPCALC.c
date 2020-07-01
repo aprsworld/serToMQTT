@@ -4,7 +4,15 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <time.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 #include <json.h>
+#include <errno.h>
+
+#include "json_pointer.h"
 #include <json_object_iterator.h>
 #include "serToMQTT.h"
 
@@ -60,6 +68,25 @@ static void ll_names_value(LLIST *p, FILE *out) {
 		p = p->next;
 	}
 }
+#if 0
+static void ll_output_names_value(LLIST *p, FILE *out) {
+	enum json_type type;
+
+
+	while ( 0 != p ) {
+		type = json_object_get_type(p->jobj);
+		switch ( type ) {
+			case json_type_boolean: 
+			case json_type_double: 
+			case json_type_int: 
+			case json_type_string:
+				fprintf(out,"print \"%s =\",%s\n",p->name,p->name);
+				break;
+		}
+		p = p->next;
+	}
+}
+#endif
 static int count_periods( char *s ) {
 	char *q;
 	int i = 0;
@@ -257,7 +284,7 @@ static void alloc(LLIST *p, int periodCount ,FILE *out) {
 }
 static void ll_object_alloc(LLIST *p,int MAXperiodCount,FILE *out ) {
 	int i;
-	fprintf(out,"obj OBJ%s %s;\n","data","data");
+	fprintf(out,"global obj OBJ%s %s;\n","data","data");
 	for ( i = 1 ; MAXperiodCount > i ; i++ ) {
 		alloc(p,i,out);
 	}
@@ -305,30 +332,269 @@ static void ll_mat_alloc(LLIST *p,int MAXperiodCount,FILE *out ) {
 		mat_alloc(p,i,out);
 	}
 }
-int jsonToAPCALC(json_object * jobj ) {
+char apcalc[256] = "/usr/bin/calc";
+static void _do_add_channel(json_object * jobj,  char *jsonPath, char *arg1, char *arg2, char *arg3 ) {
+	struct json_object *cobj = 0;
+	char	*p;
+
+	if ( '"'  == arg1[0] ) {	/* this is a string */
+		cobj = json_string_division(arg1,arg2,arg3);
+	} if ( 0 != strpbrk(arg1,"0123456789") ) {
+		if ( 0 != strchr(arg1,'.') ) {
+			cobj = json_division(atof(arg1),arg2,arg3);
+		} else {
+			cobj = json_int_division(atoi(arg1),arg2,arg3);
+		}
+	}
+
+	/* okay the object to be added exists */
+	p = strrchr(jsonPath,'/');
+	p++;
+	p[-1] = '\0';
+	/* p now is the name of the object and jsonPath is where it goes */
+	int rc;
+	json_object *tmp = NULL;
+	rc = json_pointer_get(jobj,jsonPath,&tmp);
+
+	if ( 0 != rc ) {
+		fprintf(stderr,"# cannot find jsonPath %s\n",jsonPath);
+		return;
+	} 
+
+	json_object_object_add(tmp,p,cobj);
+
+	
+
+
+}
+static void _parse_jsonPath(char *d, char *s ) {
+	char	buffer[256];
+	int i;
+
+	d[0] = '\0';
+
+	strncpy(buffer,s,sizeof(buffer));
+
+	char *p, *q;
+
+	q = buffer;
+	while ( ' ' == q[0] ) {
+		q++;
+	}
+	while ( 0 != ( p = strsep(&q,"."))) {
+		if ( 0 == strcmp(p,"data")) {
+			strcat(d,"/");
+		} else {
+			strcat(d,p);
+			strcat(d,"/");
+		}
+	}
+	while ( '/' == d[ i = strlen(d) - 1 ] ) {
+		d[i] = '\0';
+	}
+}
+static void _parse_add_channel(json_object * jobj , char *line ) {
+	char	buffer[256];
+	char	jsonPath[128];
+	char	arg1[64];
+	char	arg2[64];
+	char	arg3[64];
+
+	strncpy(buffer,line,sizeof(buffer));
+	char *p, *q;
+	
+	q = buffer;
+	while ( ' ' >= q[0] && 0 != q[0] ) {
+		q++;
+	}
+//add channel data.formattedData.XRW2G.wtf(13,"angle of attack" ,"degrees")
+	p = strsep(&q," (");
+	if ( 0 != p ) {
+		_parse_jsonPath(jsonPath,p);
+	} else {
+		fprintf(stderr,"# cannot extract  jsonPATH %s \n",p);
+		return;
+	}
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto bad_format;
+	}
+	strcpy(arg1,p);
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto bad_format;
+	}
+	strcpy(arg2,p);
+	p = strsep(&q,",");
+	if ( 0 == p ) {
+		goto bad_format;
+	}
+	strcpy(arg3,p);
+
+
+	_do_add_channel(jobj,jsonPath,arg1,arg2,arg3);
+
+	bad_format:
+	;;;
+		
+}
+static void _parse_add(json_object * jobj , char *line ) {
+	char	buffer[256];
+
+	strncpy(buffer,line,sizeof(buffer));
+	char *p, *q;
+	
+	q = buffer;
+	while ( ' ' >= q[0] && 0 != q[0] ) {
+		q++;
+	}
+	if ( 0 != q[0] ) {
+
+		p = strsep(&q," ");
+		if ( 0 == strcmp("channel",p) ) {
+			_parse_add_channel(jobj,q);
+		} else {
+			fprintf(stderr,"# unknown command add %s %s\n",p,q);
+		}
+	}
+}
+static void _do_del(json_object ** jobjP , char *path ) {
+	char jsonPath[128];
+
+	_parse_jsonPath(jsonPath,path);
+
+	json_object *tmp = NULL;
+	int rc = json_pointer_set(jobjP,jsonPath,tmp);
+
+	if ( 0 != rc ) {
+		fprintf(stderr,"# del %s failed.\n",path);
+	}
+}
+static void _process_this_line(json_object ** jobjP , char *line ) {
+	char	buffer[256];
+
+	strncpy(buffer,line,sizeof(buffer));
+	char *p, *q;
+	
+	q = buffer;
+	while ( ' ' >= q[0] && 0 != q[0] ) {
+		q++;
+	}
+	if ( 0 != q[0] ) {
+		p = strsep(&q," ");
+		if ( 0 == strcmp("add",p) ) {
+			_parse_add(*jobjP,q);
+		} else if ( 0 == strcmp("del",p) ) {
+			_do_del(jobjP,q);
+		} else {
+			fprintf(stderr,"# unknown command %s %s\n",p,q);
+		}
+	}
+
+
+}
+static void _process_commands(json_object ** jobjP , char *commands ) {
+	char *tmp = malloc(strlen(commands)+1);
+	if ( 0 != tmp ) {
+		strcpy(tmp,commands);
+	}
+	char *p, *q;
+	q = tmp;
+
+	while ( p = strsep(&q,"\n") ) {
+		_process_this_line(jobjP,p);
+
+	}
+	
+	if ( 0 != tmp ) {
+		free(tmp);
+	}
+
+	
+	
+}
+static void _process( json_object ** jobjP, FILE *in ) {
+
+	char	buffer[128];
+
+	while ( fgets(buffer,sizeof(buffer),in)) {
+		fputs(buffer,stderr);
+		_process_commands(jobjP,buffer);
+	}
+}
+int jsonToAPCALC(json_object ** jobjP , char *commands ) {
+	json_object *jobj = *jobjP;
+	FILE *in = 0;
+	FILE *out = 0;
 	int MAXperiodCount = 0;
+	char cmd[128] = {};
+	char fifo_name[32] = {};
+	static int fifo_idx;
+	snprintf(fifo_name,sizeof(fifo_name),"./%ld.%d.%d",time((time_t * ) 0),fifo_idx,getpid());
+
+	if ( mkfifo(fifo_name,0777)) {
+		fprintf(stderr,"# mkfifo(\"%s\",0777) failed.\n",fifo_name);
+		goto cleanup;
+		}
+
 	LLIST  *root = 0;
 
-	FILE *out = stdout;
+	snprintf(cmd,sizeof(cmd),"%s < %s",apcalc,fifo_name);
 
+	in = popen(cmd,"r");
+	if ( 0 == in ) {
+		fprintf(stderr,"# %s\n",strerror(errno));
+		goto cleanup;
+		}
+
+	out = fopen(fifo_name,"w");
+	if ( 0 == out ) {
+		fprintf(stderr,"# %s\n",strerror(errno));
+		goto cleanup;
+		}
 	/* traverse converts jobj to a linked list LLIST where root is its base. */
 	traverse(&root,jobj,"data");
-	/* ll_set_stuff  sets (LLIT *p) p->periodCount and (LLIT *p) p->type */
-	ll_set_stuff(root);
-	/* ll_get_stuff_max_periodCount returns MAX (LLIT *p) p->periodCount */
-	MAXperiodCount = ll_get_stuff_max_periodCount(root);
-	/* ll_object_dec declares all obj */
-	ll_object_dec(root,MAXperiodCount,out);
-	/* ll_object_alloc instantiates all obj */
-	ll_object_alloc(root,MAXperiodCount,out);
-	/* ll_mat_alloc instantiates all mat  */
-	ll_mat_alloc(root,MAXperiodCount,out);
-	/* ll_names_value assignes values to all name/value pairs */
-	ll_names_value(root,out);
+	if ( 0 == fork() ) {
+		/* ll_set_stuff  sets (LLIT *p) p->periodCount and (LLIT *p) p->type */
+		ll_set_stuff(root);
+		/* ll_get_stuff_max_periodCount returns MAX (LLIT *p) p->periodCount */
+		MAXperiodCount = ll_get_stuff_max_periodCount(root);
+		/* ll_object_dec declares all obj */
+		ll_object_dec(root,MAXperiodCount,out);
+		/* ll_object_alloc instantiates all obj */
+		ll_object_alloc(root,MAXperiodCount,out);
+		/* ll_mat_alloc instantiates all mat  */
+		ll_mat_alloc(root,MAXperiodCount,out);
+		/* ll_names_value assignes values to all name/value pairs */
+		ll_names_value(root,out);
+		fputs("/*  perform calculations here */\n",out);
+//		ll_output_names_value(root,out);
 
-	/* ll_names_free frees the LLIST */
-	ll_names_free(root);
+		fputs(commands,out);
+
+		/* ll_names_free frees the LLIST */
+		ll_names_free(root);
+		fputs("quit;\n",out);
+		fflush(out);
+		exit(0);
+	}
+	int status;
+	wait(&status);
 	
+	cleanup:
+#if 1
+	if ( 0 != out ) {
+		fclose(out);
+	}
+#endif
+	if ( 0 != in ) {
+		_process(jobjP,in);
+		fclose(in);
+	}
+	if ( '\0' < fifo_name[0] ) {
+		unlink(fifo_name);
+	}
+
 
 	return 0;
 }
