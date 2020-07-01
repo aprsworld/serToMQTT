@@ -462,12 +462,17 @@ static void _do_del(json_object ** jobjP , char *path ) {
 	char jsonPath[128];
 
 	_parse_jsonPath(jsonPath,path);
+	char *p = strrchr(jsonPath,'/');
+	p++;
+	p[-1] = '\0';
 
 	json_object *tmp = NULL;
-	int rc = json_pointer_set(jobjP,jsonPath,tmp);
+	int rc = json_pointer_get(*jobjP,jsonPath,&tmp);
 
 	if ( 0 != rc ) {
 		fprintf(stderr,"# del %s failed.\n",path);
+	} else {
+		json_object_object_del(*jobjP,p);
 	}
 }
 static void _process_this_line(json_object ** jobjP , char *line ) {
