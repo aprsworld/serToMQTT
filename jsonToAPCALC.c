@@ -120,6 +120,45 @@ static int ll_get_stuff_max_periodCount( LLIST *p) {
 	return periodCount;
 }
 
+static char  top_level[256];
+static char * get_key( char *s, int periodCount ) {
+	static char buffer[128];
+	char *p,*q;
+
+	memset(buffer,'\0',sizeof(buffer));
+	strcpy(buffer,s);
+
+	q = buffer;
+
+	while ( periodCount-- ) {
+		p = strchr(q,'.');
+		if ( 0 != p ) {
+			p++;
+		}
+		q = p;
+	}
+	if ( 0 != p ) {
+		p[-1] = '\0';
+	}
+	return buffer;
+}
+static void ll_set_top_level( LLIST *p, int m ) {
+	m -= 1;
+
+	while ( 0 != p ) {
+		if ( m == p->periodCount  ) {
+			switch ( p->type ) {
+				case json_type_boolean: 
+				case json_type_double: 
+				case json_type_int: 
+				case json_type_string:
+					strcpy(top_level,get_key(p->name,m));
+					return;
+			}
+		}
+		p = p->next;
+	}
+}
 static void ll_names_free(LLIST *p) {
 	LLIST  *q;
 
@@ -176,27 +215,6 @@ static void traverse( LLIST **root, json_object *jobj , char *label ) {
 		
 
 
-}
-static char * get_key( char *s, int periodCount ) {
-	static char buffer[128];
-	char *p,*q;
-
-	memset(buffer,'\0',sizeof(buffer));
-	strcpy(buffer,s);
-
-	q = buffer;
-
-	while ( periodCount-- ) {
-		p = strchr(q,'.');
-		if ( 0 != p ) {
-			p++;
-		}
-		q = p;
-	}
-	if ( 0 != p ) {
-		p[-1] = '\0';
-	}
-	return buffer;
 }
 static char *strip_subscipt( char *s ) {
 	int state = 0;
@@ -367,20 +385,26 @@ static void _do_add_channel(json_object * jobj,  char *jsonPath, char *arg1, cha
 
 
 }
+
 static void _parse_jsonPath(char *d, char *s ) {
 	char	buffer[256];
 	int i;
 
 	d[0] = '\0';
 
-	strncpy(buffer,s,sizeof(buffer));
 
 	char *p, *q;
 
-	q = buffer;
-	while ( ' ' == q[0] ) {
-		q++;
+	while ( ' ' == s[0] ) {
+		s++;
 	}
+	strncpy(q = buffer,s,sizeof(buffer));
+	if ( 0 != strncmp(s,"data.",5) ) {
+		strcpy(buffer,top_level);
+		strcat(buffer,".");
+		strcat(buffer,s);
+	}
+
 	while ( 0 != ( p = strsep(&q,"."))) {
 		if ( 0 == strcmp(p,"data")) {
 			strcat(d,"/");
@@ -472,7 +496,7 @@ static void _do_del(json_object ** jobjP , char *path ) {
 	if ( 0 != rc ) {
 		fprintf(stderr,"# del %s failed.\n",path);
 	} else {
-		json_object_object_del(*jobjP,p);
+		json_object_object_del(tmp,p);
 	}
 }
 static void _process_this_line(json_object ** jobjP , char *line ) {
@@ -523,7 +547,7 @@ static void _process( json_object ** jobjP, FILE *in ) {
 	char	buffer[128];
 
 	while ( fgets(buffer,sizeof(buffer),in)) {
-		fputs(buffer,stderr);
+		// fputs(buffer,stderr);
 		_process_commands(jobjP,buffer);
 	}
 }
@@ -559,11 +583,14 @@ int jsonToAPCALC(json_object ** jobjP , char *commands ) {
 		}
 	/* traverse converts jobj to a linked list LLIST where root is its base. */
 	traverse(&root,jobj,"data");
+	/* ll_set_stuff  sets (LLIT *p) p->periodCount and (LLIT *p) p->type */
+	ll_set_stuff(root);
+	/* ll_get_stuff_max_periodCount returns MAX (LLIT *p) p->periodCount */
+	MAXperiodCount = ll_get_stuff_max_periodCount(root);
+	/*   now set the top_level */
+	ll_set_top_level(root,MAXperiodCount);
+
 	if ( 0 == fork() ) {
-		/* ll_set_stuff  sets (LLIT *p) p->periodCount and (LLIT *p) p->type */
-		ll_set_stuff(root);
-		/* ll_get_stuff_max_periodCount returns MAX (LLIT *p) p->periodCount */
-		MAXperiodCount = ll_get_stuff_max_periodCount(root);
 		/* ll_object_dec declares all obj */
 		ll_object_dec(root,MAXperiodCount,out);
 		/* ll_object_alloc instantiates all obj */

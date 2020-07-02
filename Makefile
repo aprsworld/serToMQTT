@@ -47,8 +47,8 @@ backToJson: backToJson.c protocol_NMEA0183.formatter.c
 nmea.cmd: nmea.cmd.c
 	$(CC) nmea.cmd.c  -o nmea.cmd 
 
-x: x.c jsonToAPCALC.c json_division.o
-	$(CC) x.c jsonToAPCALC.c -o x  json_division.o $(CFLAGS) $(LDFLAGS) -ljson-c -I/usr/include/json-c/
+test_jsonToAPCALC: test_jsonToAPCALC.c jsonToAPCALC.c json_division.o
+	$(CC) test_jsonToAPCALC.c jsonToAPCALC.c -o test_jsonToAPCALC  json_division.o $(CFLAGS) $(LDFLAGS) -ljson-c -I/usr/include/json-c/
 
 clean:
 	rm -f *.o 
