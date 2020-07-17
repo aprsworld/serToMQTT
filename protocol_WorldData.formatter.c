@@ -61,6 +61,35 @@ struct json_object *json_object_new_pulse( uint8_t *s ) {
 
 	return	jobj;
 }
+struct json_object *xrw2g_math( struct json_object *pulses, struct json_object *analogs ) {
+	struct json_object *jobj;
+	jobj = json_object_new_object();
+	char	buffer[64] = {};
+	int	rc;
+	double pulseCount;
+	double adjusted_pulseCount;
+
+
+	LL_xrw2g_pulseCountAnemometer *p = xrw2g_pulseCountAnemometers_root;
+
+	for ( ; 0 != p; p = p->next ) {
+		struct json_object *tmp;
+		snprintf(buffer,sizeof(buffer),"/%d/pulseCount",p->pulse_channel);
+		rc = json_pointer_get(pulses,buffer,&tmp);
+		if ( 0 == rc ) { /* success */
+			pulseCount = (double) json_object_get_int(tmp);
+			if ( 0 == pulseCount || 65535 == pulseCount ) {
+				adjusted_pulseCount = 0.0;
+			} else {
+			adjusted_pulseCount = (pulseCount/1.0)*(p->M) + p->B;
+			}
+		json_object_object_add(jobj,"AN_MKLFU",json_division(adjusted_pulseCount ,p->Title,p->Units));
+		}
+		
+	}
+
+	return jobj;
+}
 struct json_object *_XRW2G(uint8_t *s) {
 	struct json_object *jobj;
 	jobj = json_object_new_object();
@@ -118,6 +147,10 @@ struct json_object *_XRW2G(uint8_t *s) {
 	i <<=8;
 	i += s[99];
 	json_object_object_add(jobj,"intervalMS",json_object_new_int(i));
+
+	json_object_object_add(jobj,"derivatives",xrw2g_math(pulses,analogs));
+
+	
 
 	return	jobj;
 }
