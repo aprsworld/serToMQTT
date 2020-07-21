@@ -49,6 +49,7 @@ typedef struct ll_xrw2g_pulseTimeAnemometer {
 	double B;
 	char *Title;
 	char *Units;
+	char *channelName;
 } LL_xrw2g_pulseTimeAnemometer;
 
 LL_xrw2g_pulseTimeAnemometer *xrw2g_pulseTimeAnemometers_root;
@@ -60,6 +61,7 @@ typedef struct ll_xrw2g_pulseCountAnemometer {
 	double B;
 	char *Title;
 	char *Units;
+	char *channelName;
 } LL_xrw2g_pulseCountAnemometer;
 
 LL_xrw2g_pulseCountAnemometer *xrw2g_pulseCountAnemometers_root;
@@ -71,6 +73,7 @@ typedef struct ll_xrw2g_linear {
 	double B;
 	char *Title;
 	char *Units;
+	char *channelName;
 } LL_xrw2g_linear;
 
 LL_xrw2g_linear *xrw2g_linears_root;
@@ -82,6 +85,9 @@ typedef struct ll_xrw2g_thermistorNTC {
 	double Beta25;
 	double RSource;
 	double VSource;
+	char *Title;
+	char *Units;
+	char *channelName;
 } LL_xrw2g_thermistorNTC;
 
 LL_xrw2g_thermistorNTC *xrw2g_thermistorNTCs_root;
@@ -109,6 +115,24 @@ static uint16_t _crc_chk(uint8_t *data, uint8_t length) {
 }
 
 
+static char *_get_quoted_string(char *s ) {
+	char *p,*q;
+	char *string;
+	p = strchr(s,'"');
+	if ( 0 == p ) {
+		string = "";
+	} else {
+		q = strchr(p+1,'"');
+		if ( 0 == q ) {
+			string = "";
+		} else {
+			q[0] = '\0';	
+			string = p+1;
+		}
+	}
+	return strsave(string);
+
+}
 
 int16_t crc_chk(int8_t *data, int8_t length) {
 	int8_t j;
@@ -353,7 +377,7 @@ static char * get_xrw2g_pulseTimeAnemometer(char ** qP ) {
 	return	buffer;
 }
 
-static void ll_add_xrw2g_pulseTimeAnemometer(int pulse_channel, double M, double B, char *Title, char *Units ) {
+static void ll_add_xrw2g_pulseTimeAnemometer(int pulse_channel, char *channelName, double M, double B, char *Title, char *Units ) {
 	if ( 0 == xrw2g_pulseTimeAnemometers_root ) {
 		xrw2g_pulseTimeAnemometers_root = calloc(1,sizeof(LL_xrw2g_pulseTimeAnemometer));
 		xrw2g_pulseTimeAnemometers_root->pulse_channel = pulse_channel;
@@ -361,6 +385,7 @@ static void ll_add_xrw2g_pulseTimeAnemometer(int pulse_channel, double M, double
 		xrw2g_pulseTimeAnemometers_root->B = B;
 		xrw2g_pulseTimeAnemometers_root->Title = Title;
 		xrw2g_pulseTimeAnemometers_root->Units = Units;
+		xrw2g_pulseTimeAnemometers_root->channelName = channelName;
 		return;
 	}
 	LL_xrw2g_pulseTimeAnemometer *p = xrw2g_pulseTimeAnemometers_root;
@@ -374,6 +399,7 @@ static void ll_add_xrw2g_pulseTimeAnemometer(int pulse_channel, double M, double
 	p->next->B = B;
 	p->next->Title = Title;
 	p->next->Units = Units;
+	p->next->channelName = channelName;
 
 }
 static  int parse_xrw2g_pulseTimeAnemometer( char *s ) {
@@ -396,6 +422,14 @@ static  int parse_xrw2g_pulseTimeAnemometer( char *s ) {
 		fprintf(stderr,"pulse channel out of range. xrw2g_pulseTimeAnemometer\n");
 		return	-1;
 	}
+
+	p = strsep(&q,",");	
+	if ( 0 == p ) {
+		fprintf(stderr,"missing channelName  xrw2g_pulseTimeAnemometer\n");
+		return	-1;
+	}
+	char *channelName  = _get_quoted_string(p);
+	
 	p = strsep(&q,",");	
 	if ( 0 == p ) {
 		fprintf(stderr,"missing M  xrw2g_pulseTimeAnemometer\n");
@@ -412,30 +446,23 @@ static  int parse_xrw2g_pulseTimeAnemometer( char *s ) {
 
 	double B = atof(p);
 
-	if ( '"' != q[0] ) {
-		p = strsep(&q,"\"");	
-	}
-	
-	p = strsep(&q,"\"");	
+	p = strsep(&q,",");	
 	if ( 0 == p ) {
 		fprintf(stderr,"missing Title  xrw2g_pulseTimeAnemometer\n");
 		return	-1;
 	}
 
-	char *Title = strsave(p);
+	char *Title = _get_quoted_string(p);
 
-	if ( '"' != q[0] ) {
-		p = strsep(&q,"\"");	
-	}
-	p = strsep(&q,"\"");	
+	p = strsep(&q,")");	
 	if ( 0 == p ) {
 		fprintf(stderr,"missing Units  xrw2g_pulseTimeAnemometer\n");
 		return	-1;
 	}
 
-	char *Units = strsave(p);
+	char *Units = _get_quoted_string(p);
 
-	ll_add_xrw2g_pulseTimeAnemometer(pulse_channel,M,B,Title,Units);
+	ll_add_xrw2g_pulseTimeAnemometer(pulse_channel,channelName,M,B,Title,Units);
 
 	return	0;
 
@@ -481,7 +508,7 @@ static char * get_xrw2g_pulseCountAnemometer(char ** qP ) {
 	return	buffer;
 }
 
-static void ll_add_xrw2g_pulseCountAnemometer(int pulse_channel, double M, double B, char *Title, char *Units ) {
+static void ll_add_xrw2g_pulseCountAnemometer(int pulse_channel, char *channelName, double M, double B, char *Title, char *Units ) {
 	if ( 0 == xrw2g_pulseCountAnemometers_root ) {
 		xrw2g_pulseCountAnemometers_root = calloc(1,sizeof(LL_xrw2g_pulseCountAnemometer));
 		xrw2g_pulseCountAnemometers_root->pulse_channel = pulse_channel;
@@ -489,6 +516,7 @@ static void ll_add_xrw2g_pulseCountAnemometer(int pulse_channel, double M, doubl
 		xrw2g_pulseCountAnemometers_root->B = B;
 		xrw2g_pulseCountAnemometers_root->Title = Title;
 		xrw2g_pulseCountAnemometers_root->Units = Units;
+		xrw2g_pulseCountAnemometers_root->channelName = channelName;
 		return;
 	}
 	LL_xrw2g_pulseCountAnemometer *p = xrw2g_pulseCountAnemometers_root;
@@ -502,6 +530,7 @@ static void ll_add_xrw2g_pulseCountAnemometer(int pulse_channel, double M, doubl
 	p->next->B = B;
 	p->next->Title = Title;
 	p->next->Units = Units;
+	p->next->channelName = channelName;
 
 }
 static  int parse_xrw2g_pulseCountAnemometer( char *s ) {
@@ -526,6 +555,13 @@ static  int parse_xrw2g_pulseCountAnemometer( char *s ) {
 	}
 	p = strsep(&q,",");	
 	if ( 0 == p ) {
+		fprintf(stderr,"missing channelName  xrw2g_pulseCountAnemometer\n");
+		return	-1;
+	}
+	char *channelName  = _get_quoted_string(p);
+	
+	p = strsep(&q,",");	
+	if ( 0 == p ) {
 		fprintf(stderr,"missing M  xrw2g_pulseCountAnemometer\n");
 		return	-1;
 	}
@@ -540,30 +576,23 @@ static  int parse_xrw2g_pulseCountAnemometer( char *s ) {
 
 	double B = atof(p);
 
-	if ( '"' != q[0] ) {
-		p = strsep(&q,"\"");	
-	}
-	
-	p = strsep(&q,"\"");	
+	p = strsep(&q,",");	
 	if ( 0 == p ) {
 		fprintf(stderr,"missing Title  xrw2g_pulseCountAnemometer\n");
 		return	-1;
 	}
 
-	char *Title = strsave(p);
+	char *Title = _get_quoted_string(p);
 
-	if ( '"' != q[0] ) {
-		p = strsep(&q,"\"");	
-	}
-	p = strsep(&q,"\"");	
+	p = strsep(&q,")");	
 	if ( 0 == p ) {
 		fprintf(stderr,"missing Units  xrw2g_pulseCountAnemometer\n");
 		return	-1;
 	}
 
-	char *Units = strsave(p);
+	char *Units = _get_quoted_string(p);
 
-	ll_add_xrw2g_pulseCountAnemometer(pulse_channel,M,B,Title,Units);
+	ll_add_xrw2g_pulseCountAnemometer(pulse_channel,channelName,M,B,Title,Units);
 
 	return	0;
 
@@ -609,7 +638,7 @@ static char * get_xrw2g_linear(char ** qP ) {
 	return	buffer;
 }
 
-static void ll_add_xrw2g_linear(int analog_channel, double M, double B, char *Title, char *Units ) {
+static void ll_add_xrw2g_linear(int analog_channel, char *channelName, double M, double B, char *Title, char *Units ) {
 	if ( 0 == xrw2g_linears_root ) {
 		xrw2g_linears_root = calloc(1,sizeof(LL_xrw2g_linear));
 		xrw2g_linears_root->analog_channel = analog_channel;
@@ -617,6 +646,7 @@ static void ll_add_xrw2g_linear(int analog_channel, double M, double B, char *Ti
 		xrw2g_linears_root->B = B;
 		xrw2g_linears_root->Title = Title;
 		xrw2g_linears_root->Units = Units;
+		xrw2g_linears_root->channelName = channelName;
 		return;
 	}
 	LL_xrw2g_linear *p = xrw2g_linears_root;
@@ -630,6 +660,7 @@ static void ll_add_xrw2g_linear(int analog_channel, double M, double B, char *Ti
 	p->next->B = B;
 	p->next->Title = Title;
 	p->next->Units = Units;
+	p->next->channelName = channelName;
 
 }
 static  int parse_xrw2g_linear( char *s ) {
@@ -648,10 +679,17 @@ static  int parse_xrw2g_linear( char *s ) {
 	}
 	int analog_channel = atoi(p);
 
-	if ( 0 > analog_channel || 2 < analog_channel ) {
+	if ( 0 > analog_channel || 7 < analog_channel ) {
 		fprintf(stderr,"pulse channel out of range. xrw2g_linear\n");
 		return	-1;
 	}
+	p = strsep(&q,",");	
+	if ( 0 == p ) {
+		fprintf(stderr,"Parse error xrw2g_linear\n");
+		return	-1;
+	}
+	char *channelName = _get_quoted_string(p);
+
 	p = strsep(&q,",");	
 	if ( 0 == p ) {
 		fprintf(stderr,"missing M  xrw2g_linear\n");
@@ -668,30 +706,22 @@ static  int parse_xrw2g_linear( char *s ) {
 
 	double B = atof(p);
 
-	if ( '"' != q[0] ) {
-		p = strsep(&q,"\"");	
-	}
-	
-	p = strsep(&q,"\"");	
+	p = strsep(&q,",");	
 	if ( 0 == p ) {
-		fprintf(stderr,"missing Title  xrw2g_linear\n");
+		fprintf(stderr,"Parse error xrw2g_linear\n");
 		return	-1;
 	}
+	char *Title = _get_quoted_string(p);
 
-	char *Title = strsave(p);
-
-	if ( '"' != q[0] ) {
-		p = strsep(&q,"\"");	
-	}
-	p = strsep(&q,"\"");	
+	p = strsep(&q,")");	
 	if ( 0 == p ) {
-		fprintf(stderr,"missing Units  xrw2g_linear\n");
+		fprintf(stderr,"Parse error xrw2g_linear\n");
 		return	-1;
 	}
+	char *Units = _get_quoted_string(p);
 
-	char *Units = strsave(p);
 
-	ll_add_xrw2g_linear(analog_channel,M,B,Title,Units);
+	ll_add_xrw2g_linear(analog_channel,channelName,M,B,Title,Units);
 
 	return	0;
 
@@ -735,7 +765,8 @@ static char * get_xrw2g_thermistorNTC(char ** qP ) {
 	s[0] = '\0';
 	return	buffer;
 }
-static void ll_add_xrw2g_thermistorNTC(int analog_channel, double Beta, double Beta25, double RSource, double VSource ) {
+static void ll_add_xrw2g_thermistorNTC(int analog_channel, char *channelName, double Beta, double Beta25, 
+	double RSource, double VSource, char *Title, char *Units ) {
 	if ( 0 == xrw2g_thermistorNTCs_root ) {
 		xrw2g_thermistorNTCs_root = calloc(1,sizeof(LL_xrw2g_thermistorNTC));
 		xrw2g_thermistorNTCs_root->analog_channel = analog_channel;
@@ -743,6 +774,9 @@ static void ll_add_xrw2g_thermistorNTC(int analog_channel, double Beta, double B
 		xrw2g_thermistorNTCs_root->Beta25 = Beta25;
 		xrw2g_thermistorNTCs_root->RSource = RSource;
 		xrw2g_thermistorNTCs_root->VSource = VSource;
+		xrw2g_thermistorNTCs_root->channelName = channelName;
+		xrw2g_thermistorNTCs_root->Title = Title;
+		xrw2g_thermistorNTCs_root->Units = Units;
 		return;
 	}
 	LL_xrw2g_thermistorNTC *p = xrw2g_thermistorNTCs_root;
@@ -756,6 +790,9 @@ static void ll_add_xrw2g_thermistorNTC(int analog_channel, double Beta, double B
 	p->next->Beta = Beta;
 	p->next->RSource = RSource;
 	p->next->VSource = VSource;
+	p->next->channelName = channelName;
+	p->next->Title = Title;
+	p->next->Units = Units;
 
 }
 static  int parse_xrw2g_thermistorNTC( char *s ) {
@@ -774,10 +811,18 @@ static  int parse_xrw2g_thermistorNTC( char *s ) {
 	}
 	int analog_channel = atoi(p);
 
-	if ( 0 > analog_channel || 2 < analog_channel ) {
+	if ( 0 > analog_channel || 7 < analog_channel ) {
 		fprintf(stderr,"pulse channel out of range. xrw2g_thermistorNTC\n");
 		return	-1;
 	}
+	p = strsep(&q,",");	
+	if ( 0 == p ) {
+		fprintf(stderr,"missing channelName  xrw2g_thermistorNTC\n");
+		return	-1;
+	}
+
+	char *channelName = _get_quoted_string(p);
+
 	p = strsep(&q,",");	
 	if ( 0 == p ) {
 		fprintf(stderr,"missing Beta  xrw2g_thermistorNTC\n");
@@ -802,15 +847,30 @@ static  int parse_xrw2g_thermistorNTC( char *s ) {
 	
 
 	double RSource = atof(p);
-	p = strsep(&q,")");	
+	p = strsep(&q,",");	
 	if ( 0 == p ) {
 		fprintf(stderr,"missing DSource xrw2g_thermistorNTC\n");
 		return	-1;
 	}
 	double DSource = atof(p);
 
+	p = strsep(&q,",");	
+	if ( 0 == p ) {
+		fprintf(stderr,"missing Title xrw2g_thermistorNTC\n");
+		return	-1;
+	}
+	char *Title = _get_quoted_string(p);
 
-	ll_add_xrw2g_thermistorNTC(analog_channel,Beta,Beta25,RSource,DSource);
+
+	p = strsep(&q,")");	
+	if ( 0 == p ) {
+		fprintf(stderr,"missing Units xrw2g_thermistorNTC\n");
+		return	-1;
+	}
+	char *Units = _get_quoted_string(p);
+
+
+	ll_add_xrw2g_thermistorNTC(analog_channel,channelName, Beta,Beta25,RSource,DSource,Title, Units);
 
 	return	0;
 

@@ -61,14 +61,10 @@ struct json_object *json_object_new_pulse( uint8_t *s ) {
 
 	return	jobj;
 }
-struct json_object *xrw2g_math( struct json_object *pulses, struct json_object *analogs ) {
-	struct json_object *jobj;
-	jobj = json_object_new_object();
-	char	buffer[64] = {};
-	int	rc;
-	double pulseCount;
+static void do_LL_xrw2g_pulseCountAnemometer(struct json_object *jobj, int timeInterval, struct json_object *pulses ) {
+	char buffer[64] = {};
+	int rc, pulseCount;
 	double adjusted_pulseCount;
-
 
 	LL_xrw2g_pulseCountAnemometer *p = xrw2g_pulseCountAnemometers_root;
 
@@ -77,16 +73,94 @@ struct json_object *xrw2g_math( struct json_object *pulses, struct json_object *
 		snprintf(buffer,sizeof(buffer),"/%d/pulseCount",p->pulse_channel);
 		rc = json_pointer_get(pulses,buffer,&tmp);
 		if ( 0 == rc ) { /* success */
-			pulseCount = (double) json_object_get_int(tmp);
+			pulseCount = json_object_get_int(tmp);
 			if ( 0 == pulseCount || 65535 == pulseCount ) {
 				adjusted_pulseCount = 0.0;
 			} else {
-			adjusted_pulseCount = (pulseCount/1.0)*(p->M) + p->B;
+				if ( 0 != timeInterval ) {
+					adjusted_pulseCount = ((double) pulseCount/(double) timeInterval)*(p->M) + p->B;
+				} else {
+					fprintf(stderr,"# 0 == timeInterval\n");
+					adjusted_pulseCount = 0.0;
+				}
 			}
-		json_object_object_add(jobj,"AN_MKLFU",json_division(adjusted_pulseCount ,p->Title,p->Units));
+	
+		json_object_object_add(jobj,p->channelName,json_division(adjusted_pulseCount ,p->Title,p->Units));
 		}
-		
 	}
+
+}
+static void do_LL_xrw2g_pulseTimeAnemometer(struct json_object *jobj,  struct json_object *pulses ) {
+	char buffer[64] = {};
+	int rc, pulseTime;
+	double adjusted_pulseTime;
+
+	LL_xrw2g_pulseTimeAnemometer *p = xrw2g_pulseTimeAnemometers_root;
+
+	for ( ; 0 != p; p = p->next ) {
+		struct json_object *tmp;
+		snprintf(buffer,sizeof(buffer),"/%d/pulseTime",p->pulse_channel);
+		rc = json_pointer_get(pulses,buffer,&tmp);
+		if ( 0 == rc ) { /* success */
+			pulseTime = json_object_get_int(tmp);
+			if ( 0 == pulseTime || 65535 == pulseTime ) {
+				adjusted_pulseTime = 0.0;
+			} else {
+				adjusted_pulseTime = (p->M *10000.0)/pulseTime + p->B;
+			}
+	
+		json_object_object_add(jobj,p->channelName,json_division(adjusted_pulseTime ,p->Title,p->Units));
+		}
+	}
+
+}
+static void do_LL_xrw2g_linear(struct json_object *jobj, struct json_object *analogs ) {
+	char buffer[64] = {};
+	int rc, analogCurrent;
+	double adjusted_analogCurrent;
+
+	LL_xrw2g_linear *p = xrw2g_linears_root;
+
+	for ( ; 0 != p; p = p->next ) {
+		struct json_object *tmp;
+		snprintf(buffer,sizeof(buffer),"/%d/analogCurrent",p->analog_channel);
+		rc = json_pointer_get(analogs,buffer,&tmp);
+		if ( 0 == rc ) { /* success */
+			analogCurrent = json_object_get_int(tmp);
+			adjusted_analogCurrent = p->M * analogCurrent + p->B;
+	
+			json_object_object_add(jobj,p->channelName,json_division(adjusted_analogCurrent ,p->Title,p->Units));
+		}
+	}
+}
+static void do_LL_xrw2g_thermistorNTC(struct json_object *jobj, struct json_object *analogs ) {
+	char buffer[64] = {};
+	int rc, analogCurrent;
+	double adjusted_analogCurrent;
+
+	LL_xrw2g_thermistorNTC *p = xrw2g_thermistorNTCs_root;
+
+	for ( ; 0 != p; p = p->next ) {
+		struct json_object *tmp;
+		snprintf(buffer,sizeof(buffer),"/%d/analogCurrent",p->analog_channel);
+		rc = json_pointer_get(analogs,buffer,&tmp);
+		if ( 0 == rc ) { /* success */
+			analogCurrent = json_object_get_int(tmp);
+			//1.0/( (1.0/beta)*ln(((voltage*rsource)/(vsource-voltage))/beta25) + 1.0/298.15); 
+			adjusted_analogCurrent = 7.25;	// stub
+	
+			json_object_object_add(jobj,p->channelName,json_division(adjusted_analogCurrent ,p->Title,p->Units));
+		}
+	}
+}
+struct json_object *xrw2g_math( int timeInterval, struct json_object *pulses, struct json_object *analogs ) {
+	struct json_object *jobj;
+	jobj = json_object_new_object();
+
+	do_LL_xrw2g_pulseCountAnemometer(jobj , timeInterval , pulses);
+	do_LL_xrw2g_pulseTimeAnemometer(jobj ,  pulses);
+	do_LL_xrw2g_linear(jobj ,  analogs);
+	do_LL_xrw2g_thermistorNTC(jobj ,  analogs);
 
 	return jobj;
 }
@@ -145,10 +219,10 @@ struct json_object *_XRW2G(uint8_t *s) {
 
 	i = s[94];
 	i <<=8;
-	i += s[99];
+	i += s[95];
 	json_object_object_add(jobj,"intervalMS",json_object_new_int(i));
 
-	json_object_object_add(jobj,"derivatives",xrw2g_math(pulses,analogs));
+	json_object_object_add(jobj,"derivatives",xrw2g_math(i,pulses,analogs));
 
 	
 

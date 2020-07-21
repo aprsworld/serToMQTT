@@ -6,7 +6,8 @@ TOPIC="World_Data"
 PROTOCOL="worlddata"
 PORT="/dev/ttyUSB0"
 SPEED="9600"
-SPECIAL='format=XRW2G xrw2g_pulseTimeAnemometer(0, 0.5, 1.0, "Reference Anemometer", "m/s") xrw2g_pulseTimeAnemometer(1, 0.7, 4.0, "Imperial Anemometer", "m/h") xrw2g_pulseCountAnemometer(0, 0.5, 1.0, "Reference Anemometer", "m/s")'
+SPECIAL='format=XRW2G xrw2g_pulseCountAnemometer(0, "Ref", 0.5, 1.0, "Reference Anemometer", "m/s") xrw2g_pulseCountAnemometer(0, "Imperial", 0.7, 4.0, "Imperial Anemometer", "m/h")  xrw2g_pulseTimeAnemometer(0, "RefTine", 0.5, 1.0, "Reference Anemometer", "m/s") xrw2g_pulseTimeAnemometer(0, "ImperialTime", 0.7, 4.0, "Imperial Anemometer", "m/h") xrw2g_linear(0, "RefCurrent", 0.5, 1.0, "Reference Current", "amps") xrw2g_thermistorNTC(1,"ThermRef",4.25,5,75,7,27,"therm1","volts")'
+
 QUIET="--quiet"
 
 
