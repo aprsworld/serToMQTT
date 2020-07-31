@@ -116,9 +116,6 @@ static int text_packet_processor(char *packet, int length, uint64_t microtime_st
 			
 	rc =  serToMQTT_pub(json_object_to_json_string_ext(jobj, JSON_C_TO_STRING_PRETTY),topic);
 	json_object_put(jobj);
-	if ( 0 != tmp ) {
-		json_object_put(tmp);
-	}
 	return	rc;
 }
 
