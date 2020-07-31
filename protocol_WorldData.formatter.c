@@ -65,7 +65,6 @@ static void do_LL_xrw2g_pulseCountAnemometer(struct json_object *jobj, int timeI
 	char buffer[64] = {};
 	int rc, pulseCount;
 	double adjusted_pulseCount;
-	double hertz = 10000.0 / timeInterval;
 
 	LL_xrw2g_pulseCountAnemometer *p = xrw2g_pulseCountAnemometers_root;
 
@@ -79,7 +78,7 @@ static void do_LL_xrw2g_pulseCountAnemometer(struct json_object *jobj, int timeI
 				adjusted_pulseCount = 0.0;
 			} else {
 				if ( 0 != timeInterval ) {
-					adjusted_pulseCount = ((double) pulseCount*hertz)*(p->M) + p->B;
+					adjusted_pulseCount = ((double) pulseCount/(double) timeInterval)*(p->M) + p->B;
 				} else {
 					fprintf(stderr,"# 0 == timeInterval\n");
 					adjusted_pulseCount = 0.0;
@@ -100,7 +99,12 @@ static void do_LL_xrw2g_pulseTimeAnemometer(struct json_object *jobj,  struct js
 
 	for ( ; 0 != p; p = p->next ) {
 		struct json_object *tmp;
-		snprintf(buffer,sizeof(buffer),"/%d/pulseTime",p->pulse_channel);
+		if ( 0 == p->flag ) {
+			snprintf(buffer,sizeof(buffer),"/%d/pulseTime",p->pulse_channel);
+		} else if ( 1 == p->flag ) {
+			snprintf(buffer,sizeof(buffer),"/%d/pulseMinTime",p->pulse_channel);
+		}
+
 		rc = json_pointer_get(pulses,buffer,&tmp);
 		if ( 0 == rc ) { /* success */
 			pulseTime = json_object_get_int(tmp);

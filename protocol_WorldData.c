@@ -50,6 +50,7 @@ typedef struct ll_xrw2g_pulseTimeAnemometer {
 	char *Title;
 	char *Units;
 	char *channelName;
+	int flag;   /* 0 == pulseTime, 1 = pulseMinTime */
 } LL_xrw2g_pulseTimeAnemometer;
 
 LL_xrw2g_pulseTimeAnemometer *xrw2g_pulseTimeAnemometers_root;
@@ -377,7 +378,7 @@ static char * get_xrw2g_pulseTimeAnemometer(char ** qP ) {
 	return	buffer;
 }
 
-static void ll_add_xrw2g_pulseTimeAnemometer(int pulse_channel, char *channelName, double M, double B, char *Title, char *Units ) {
+static void ll_add_xrw2g_pulseTimeAnemometer(int pulse_channel, char *channelName, double M, double B, char *Title, char *Units , int flag) {
 	if ( 0 == xrw2g_pulseTimeAnemometers_root ) {
 		xrw2g_pulseTimeAnemometers_root = calloc(1,sizeof(LL_xrw2g_pulseTimeAnemometer));
 		xrw2g_pulseTimeAnemometers_root->pulse_channel = pulse_channel;
@@ -386,6 +387,7 @@ static void ll_add_xrw2g_pulseTimeAnemometer(int pulse_channel, char *channelNam
 		xrw2g_pulseTimeAnemometers_root->Title = Title;
 		xrw2g_pulseTimeAnemometers_root->Units = Units;
 		xrw2g_pulseTimeAnemometers_root->channelName = channelName;
+		xrw2g_pulseTimeAnemometers_root->flag = flag;
 		return;
 	}
 	LL_xrw2g_pulseTimeAnemometer *p = xrw2g_pulseTimeAnemometers_root;
@@ -400,6 +402,7 @@ static void ll_add_xrw2g_pulseTimeAnemometer(int pulse_channel, char *channelNam
 	p->next->Title = Title;
 	p->next->Units = Units;
 	p->next->channelName = channelName;
+	p->next->flag = flag;
 
 }
 static  int parse_xrw2g_pulseTimeAnemometer( char *s ) {
@@ -454,7 +457,7 @@ static  int parse_xrw2g_pulseTimeAnemometer( char *s ) {
 
 	char *Title = _get_quoted_string(p);
 
-	p = strsep(&q,")");	
+	p = strsep(&q,",");	
 	if ( 0 == p ) {
 		fprintf(stderr,"missing Units  xrw2g_pulseTimeAnemometer\n");
 		return	-1;
@@ -462,7 +465,14 @@ static  int parse_xrw2g_pulseTimeAnemometer( char *s ) {
 
 	char *Units = _get_quoted_string(p);
 
-	ll_add_xrw2g_pulseTimeAnemometer(pulse_channel,channelName,M,B,Title,Units);
+	p = strsep(&q,")");	
+	if ( 0 == p ) {
+		fprintf(stderr,"missing flag  xrw2g_pulseTimeAnemometer\n");
+		return	-1;
+	}
+	int flag = atoi(p);
+
+	ll_add_xrw2g_pulseTimeAnemometer(pulse_channel,channelName,M,B,Title,Units,flag);
 
 	return	0;
 
