@@ -139,23 +139,27 @@ struct json_object * _process( const char *s ) {
 }
 json_object *parse_a_string(char *string ) {
 
+	uint64_t latency = (uint64_t) 0 - microtime();
 	json_object *jobj = NULL;
 	json_tokener *tok = json_tokener_new();
 	const char *mystring = string;
 	int stringlen = 0;
 	enum json_tokener_error jerr;
-	do {
-		stringlen = strlen(mystring);
-		jobj = json_tokener_parse_ex(tok, mystring, stringlen);
-	} while ((jerr = json_tokener_get_error(tok)) == json_tokener_continue);
+
+	stringlen = strlen(mystring);
+	jobj = json_tokener_parse_ex(tok, mystring, stringlen);
+	jerr = json_tokener_get_error(tok);
+
 	if (jerr != json_tokener_success) {
 		fprintf(stderr, "Error: %s\n", json_tokener_error_desc(jerr));
-		// Handle errors, as appropriate for your application.
+		exit(1);
 	}
 	if (tok->char_offset < stringlen) {
 		// Handle extra characters after parsed object as desired.
 		// e.g. issue an error, parse another object from that point, etc...
 	}
+	json_tokener_free(tok);
+
 	return	jobj;
 }
 

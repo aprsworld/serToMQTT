@@ -136,10 +136,10 @@ static int  _serial_process(int serialfd) {
 	char buff[1];
 
 
-	static char packet[128];
+	static char packet[256];
 	static int packet_pos=0;
 	static uint64_t microtime_start=0;
-	static int state=STATE_LOOKING_FOR_STX;
+	static enum states state=STATE_LOOKING_FOR_STX;
 
 	n = read (serialfd, buff, sizeof(buff));  // read next character if ready
 	microtime_now=microtime();
@@ -152,6 +152,9 @@ static int  _serial_process(int serialfd) {
 			fprintf(stderr,"# (read returned 0 bytes)\n");
 		}
 		return rc;
+	}
+	if ( '\0' == buff[0] ) {
+		return	rc;
 	}
 
 	/* cancel pending alarm */
@@ -171,22 +174,27 @@ static int  _serial_process(int serialfd) {
 	/* copy byte to packet */
 	for ( i=0 ; 0 == rc && i<n ; i++ ) {
 		/* look for start character */
-		if ( STATE_LOOKING_FOR_STX == state && '$' ==  buff[i] ) {
-			packet_pos=0;
-			microtime_start=microtime_now;
-			state=STATE_IN_PACKET;
-			packet[0]='$';
+		if ( STATE_LOOKING_FOR_STX == state ) {
+			if ('$' ==  buff[i] ) {
+				packet_pos=0;
+				microtime_start=microtime_now;
+				state=STATE_IN_PACKET;
+				memset(packet,'\0',sizeof(packet));
+				packet[0]='$';
+				milliseconds_since_stx  = 0;
+			}
 		}
 
 		if ( STATE_IN_PACKET == state ) {
 			if ( milliseconds_since_stx > milliseconds_timeout ) {
 				packet_pos=0;
 				state=STATE_LOOKING_FOR_STX;
+				memset(packet,'\0',sizeof(packet));
 
 				if ( outputDebug ) {
-					printf("(timeout while reading NMEA sentence)\n");
+					fprintf(stderr, "(timeout while reading NMEA sentence)\n");
 				}
-				continue;
+				break;
 			}
 	
 			if ( '\r' == buff[i] || '\n' == buff[i] ) {
@@ -194,6 +202,9 @@ static int  _serial_process(int serialfd) {
 				alarm(0);
 				/* process packet */
 				rc = nmea_packet_processor(packet,packet_pos,microtime_start,milliseconds_since_stx);
+				if ( outputDebug ) {
+					fprintf(stderr,"# %s\n",packet);
+				}
 				microtime_start=0;
 				break;
 			}
@@ -201,6 +212,9 @@ static int  _serial_process(int serialfd) {
 			if ( packet_pos < sizeof(packet)-1 ) {
 				packet[packet_pos]=buff[i];
 				packet_pos++;
+				if ( outputDebug ) {
+					fprintf(stderr,"# %s (%d) (%d)\n",packet,packet_pos,(int)strlen(packet));
+				}
 			} else {
 				if ( outputDebug ) {
 					printf("(packet length exceeded length of buffer!)\n");

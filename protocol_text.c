@@ -176,8 +176,10 @@ static int serial_process(int serialfd) {
 		if ( STATE_LOOKING_FOR_STX == state && local_stx ==  buff[i] ) {
 			packet_pos=0;
 			microtime_start=microtime_now;
+			milliseconds_since_stx=(int) ((microtime_now-microtime_start)/1000.0);
 			state=STATE_IN_PACKET;
 			packet[0]='$';
+			break;
 		}
 
 		if ( STATE_IN_PACKET == state ) {
@@ -197,6 +199,9 @@ static int serial_process(int serialfd) {
 				alarm(0);	/* cancel alarm while we are processing packet */
 				/* process packet */
 				rc = text_packet_processor(packet,packet_pos,microtime_start,milliseconds_since_stx);
+				microtime_start=0;
+				memset(packet,'\0',sizeof(packet));
+				break;
 			}
 
 			if ( packet_pos < sizeof(packet)-1 ) {

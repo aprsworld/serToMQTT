@@ -65,6 +65,8 @@ json_object *parse_a_string(char *string ) {
 		// Handle extra characters after parsed object as desired.
 		// e.g. issue an error, parse another object from that point, etc...
 	}
+	json_tokener_free(tok);
+
 	return	jobj;
 }
 char *file_to_string(char *fname ) {

@@ -205,7 +205,9 @@ static void _do_poll(FILE *in_out ) {
 			gettimeofday(&time, NULL);
 			}
 		fputs(":39\r\n",in_out);
+		fflush(in_out);
 		microtime_now=microtime();
+		usleep(1000);
 		fgets(buffer,sizeof(buffer),in_out);
 		milliseconds_since_stx = (microtime() - microtime_now) / 1000;
 		if ( 3 == sscanf(buffer,"%lf,%lf,%lf",&x,&y,&z) ) {

@@ -31,6 +31,7 @@
 static int local_stx = '#';
 static uint8_t _PACKET_TYPE;
 static uint8_t _PACKET_LENGTH;
+static int _pollat=-1;	/* the number of milliseconds after the top of the second */	
 
 
 
@@ -194,7 +195,7 @@ int WorldData_packet_processor(uint8_t *packet, int length, uint64_t microtime_s
 	/* compare local and remote checksums */
 	if ( lChecksum != rChecksum ) {
 		if ( outputDebug ) {
-			printf("(remote and local checksum do not match!)\n");
+			fprintf(stderr,"(remote %0x and local %xd checksum do not match!)\n",rChecksum,lChecksum);
 		}
 		return rc;
 	}
@@ -284,27 +285,6 @@ static int  _serial_process(int serialfd) {
 			packet[0]=local_stx;
 			continue;
 		}
-#if 1
-		if ( 6 == packet_pos  &&  _PACKET_TYPE != packet[5] ){
-			packet_pos=0;
-			state=STATE_LOOKING_FOR_STX;
-			alarm(0);
-			if ( outputDebug ) {
-				fprintf(stderr,"# wrong PACKET_TYPE %02x\n",packet[5]);
-			}
-			continue;
-		}
-#endif
-		if ( packet_pos  == _PACKET_LENGTH ){
-			state=STATE_LOOKING_FOR_STX;
-			alarm(0);
-			/* process packet */
-			rc = WorldData_packet_processor(packet,packet_pos,microtime_start,milliseconds_since_stx);
-			microtime_start=0;
-			break;
-		}
-
-#if 1
 		if ( STATE_IN_PACKET == state && milliseconds_since_stx > milliseconds_timeout ) {
 			packet_pos=0;
 			state=STATE_LOOKING_FOR_STX;
@@ -314,7 +294,24 @@ static int  _serial_process(int serialfd) {
 			}
 			continue;
 		}
-#endif
+		if ( 6 == packet_pos  &&  _PACKET_TYPE != packet[5] ){
+			packet_pos=0;
+			state=STATE_LOOKING_FOR_STX;
+			alarm(0);
+			if ( outputDebug ) {
+				fprintf(stderr,"# wrong PACKET_TYPE %02x\n",packet[5]);
+			}
+			continue;
+		}
+		if ( packet_pos  == _PACKET_LENGTH ){
+			state=STATE_LOOKING_FOR_STX;
+			alarm(0);
+			/* process packet */
+			rc = WorldData_packet_processor(packet,packet_pos,microtime_start,milliseconds_since_stx);
+			microtime_start=0;
+			break;
+		}
+
 	
 
 
@@ -337,6 +334,13 @@ static void _do_format(char *s ) {
 
 
 }
+static void _do_pollat(char *s ) {
+	_pollat = atoi(s);
+	if ( 999 < _pollat ) {
+		fprintf(stderr,"# pollat %d > 999.  Must be 0 - 999\n",_pollat);
+		exit(1);
+	}
+}
 static void _do_command( char * s) {
 	/* s contains one command of the type  $cmd=$parameter */
 	char	buffer[256] = {};
@@ -351,9 +355,11 @@ static void _do_command( char * s) {
 		local_stx = q[0];
 	} else if ( 0 == strcmp(p,"format")) {
 		_do_format(q);
+	} else if ( 0 == strcmp(p,"pollat")) {
+		_do_pollat(q);
 	} else {
 	fprintf(stderr,"# --special-handling option '%s' not supported.\n",s);
-	fprintf(stderr,"# [stx, format ,]\n");
+	fprintf(stderr,"# [stx, format , pollat]\n");
 	exit(1);
 	}
 }
@@ -917,10 +923,35 @@ static void _overRide(char *s ) {
 		}
 	}
 }
+static void _poll(int serialfd ) {
+	static char buffer[6] = { 0x23, 0x41, 0x00, 0x01, };
+	struct timeval time;
+	gettimeofday(&time, NULL); 
+	/* three condition  -1 = before  0 = during and  1= after */
+	int now = time.tv_usec / 1000;
+	int flag;
+	static int already_done;
+
+	if ( _pollat > now ) {
+		flag = -1;
+	} if ( _pollat < (now + 50 ) ) {
+		flag = 0;
+	} else {
+		flag = 1;
+	}
+
+	if ( 0 != flag ) {
+		already_done = 0;
+	} else if ( 0 == already_done ) {
+		already_done = 1;
+		write(serialfd,buffer,4);
+	}
+}
 
 void WorldData_engine(int serialfd,char *special_handling ) {
 	int i;
 	int rc = 0;
+	struct timeval poll_interval;
 
 	_xrw2g_pulseCountAnemometer(special_handling);
 	_xrw2g_pulseTimeAnemometer(special_handling);
@@ -941,13 +972,22 @@ void WorldData_engine(int serialfd,char *special_handling ) {
 	/* set an alarm to send a SIGALARM if data not received within alarmSeconds */
 	//alarm(alarmSeconds);
 
+	if ( -1 != _pollat ) {
+		poll_interval.tv_sec = 0;
+		poll_interval.tv_usec = 10000;	/* 10 msec */
+	}
 
 	for ( ; 0 == rc ; ) {
 		/* Block until input arrives on one or more active sockets. */
 		read_fd_set = active_fd_set;
 
 
-		i=select(FD_SETSIZE, &read_fd_set, NULL, NULL, NULL);
+		i=select(FD_SETSIZE, &read_fd_set, NULL, NULL, ( -1 == _pollat ) ? NULL: &poll_interval );
+		if ( -1 != _pollat ) {
+			_poll(serialfd);
+		}
+
+
 		if ( EBADF == i ) {
 			fprintf(stderr,"# select() EBADF error. Aborting.\n");
 			exit(1);
