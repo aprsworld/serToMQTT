@@ -192,6 +192,7 @@ static void _do_poll(FILE *in_out ) {
 	char packet[128];
 	uint64_t microtime_start=0;
 	int rc;
+	int bad_count = 0;
 
 
 
@@ -213,10 +214,11 @@ static void _do_poll(FILE *in_out ) {
 		if ( 3 == sscanf(buffer,"%lf,%lf,%lf",&x,&y,&z) ) {
 			snprintf(packet,sizeof(packet),"$YOST,%lf,%lf,%lf",x,y,z);
 			rc = _yost_packet_processor(packet,strlen(packet),microtime_start,milliseconds_since_stx);
-#if 0
-#endif
+			bad_count = 0;
+		} else {
+			bad_count++;
 		}
-	} while (1);
+	} while (10 > bad_count );
 
 
 }
