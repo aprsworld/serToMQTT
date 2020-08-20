@@ -50,5 +50,8 @@ nmea.cmd: nmea.cmd.c
 test_jsonToAPCALC: test_jsonToAPCALC.c jsonToAPCALC.c json_division.o
 	$(CC) test_jsonToAPCALC.c jsonToAPCALC.c -o test_jsonToAPCALC  json_division.o $(CFLAGS) $(LDFLAGS) -ljson-c -I/usr/include/json-c/
 
+GPSsetSYSTIME: GPSsetSYSTIME.c setDateTimeFromGPS.o
+	$(CC) GPSsetSYSTIME.c -o GPSsetSYSTIME  $(CFLAGS) $(LDFLAGS) setDateTimeFromGPS.o
+
 clean:
 	rm -f *.o 

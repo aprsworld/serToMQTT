@@ -11,8 +11,6 @@ when we get the date and time from _RMC then we will set the system time
 #include <time.h>
 #include <sys/time.h>
 #include <errno.h>
-#include <json.h>
-#include "serToMQTT.h"
 
 static int antoi(char *s, int len ) {
 	char	buffer[32] = {};
@@ -42,7 +40,7 @@ int setDateTimeFromGPS(char *aprsworld_date) {
 		rc = gettimeofday(&tv_before,( struct timezone *) 0);
 		rc |= settimeofday(&tv,( const struct timezone *) 0);
 		if ( 0 != rc ) {
-			fprintf(stderr,"# cannot settimeofday().  %s\n",strerror(errno));
+			fprintf(stderr,"# cannot settimeofday(). errno = %d %s\n",errno,strerror(errno));
 		} 
 		fprintf(stderr,"# settimeofday=%s\n",aprsworld_date);
 		fprintf(stderr,"# settimeofday delta %ld seconds %ld micro seconds\n",
