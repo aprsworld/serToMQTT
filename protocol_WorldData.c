@@ -195,9 +195,10 @@ int WorldData_packet_processor(uint8_t *packet, int length, uint64_t microtime_s
 
 	/* compare local and remote checksums */
 	if ( lChecksum != rChecksum ) {
+		crc_error_count++;
 		if ( outputDebug ) {
 			fprintf(stderr,"(remote %04x and local %04x checksum do not match!) %d crc error \n",
-					rChecksum,lChecksum,++crc_error_count);
+					rChecksum,lChecksum,crc_error_count);
 		}
 		return rc;
 	}
