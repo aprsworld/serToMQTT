@@ -173,6 +173,7 @@ int WorldData_packet_processor(uint8_t *packet, int length, uint64_t microtime_s
 	int rc = 0;
 	uint16_t lChecksum,rChecksum;
 	const char	*topic = mqtt_topic;
+	static int crc_error_count;
 
 	/* quick sanity check */
 	if ( length < 9 )
@@ -184,18 +185,19 @@ int WorldData_packet_processor(uint8_t *packet, int length, uint64_t microtime_s
 	// debug_crc(packet,length);
 	
 	/* calculate local checksum */
-	lChecksum = _crc_chk(packet+1,length - 3);
+	lChecksum = _crc_chk(packet+1,_PACKET_LENGTH - 3);
 
 	/* compute remote checksum */
-	rChecksum = packet[length -2 ];
+	rChecksum = packet[_PACKET_LENGTH -2 ];
 	rChecksum <<= 8;
-	rChecksum += packet[length -1 ];
+	rChecksum += packet[_PACKET_LENGTH -1 ];
 
 
 	/* compare local and remote checksums */
 	if ( lChecksum != rChecksum ) {
 		if ( outputDebug ) {
-			fprintf(stderr,"(remote %0x and local %xd checksum do not match!)\n",rChecksum,lChecksum);
+			fprintf(stderr,"(remote %04x and local %04x checksum do not match!) %d crc error \n",
+					rChecksum,lChecksum,++crc_error_count);
 		}
 		return rc;
 	}
@@ -324,8 +326,8 @@ static void _do_format(char *s ) {
 	if ( 0 == strcmp(s,"XRW2G" )) {
 		_PACKET_TYPE = 23;
 		_PACKET_LENGTH = 98;	
-		fprintf(stderr,"# _PACKET_TYPE = %02x\n",_PACKET_TYPE);
-		fprintf(stderr,"# _PACKET_LENGTH = %02x\n",_PACKET_LENGTH);
+		fprintf(stderr,"# _PACKET_TYPE = 0x%02x\n",_PACKET_TYPE);
+		fprintf(stderr,"# _PACKET_LENGTH = 0x%02x (%d)\n",_PACKET_LENGTH,_PACKET_LENGTH);
 	} else {
 		fprintf(stderr,"# Bad format %s\n",s);
 		fprintf(stderr,"# format=[XRW2G]\n");
@@ -974,18 +976,18 @@ void WorldData_engine(int serialfd,char *special_handling ) {
 
 	if ( -1 != _pollat ) {
 		poll_interval.tv_sec = 0;
-		poll_interval.tv_usec = 10000;	/* 10 msec */
+		poll_interval.tv_usec = 1000;	/* 1 msec */
 	}
 
 	for ( ; 0 == rc ; ) {
 		/* Block until input arrives on one or more active sockets. */
 		read_fd_set = active_fd_set;
 
-
-		i=select(FD_SETSIZE, &read_fd_set, NULL, NULL, ( -1 == _pollat ) ? NULL: &poll_interval );
 		if ( -1 != _pollat ) {
 			_poll(serialfd);
 		}
+
+		i=select(FD_SETSIZE, &read_fd_set, NULL, NULL, ( -1 == _pollat ) ? NULL: &poll_interval );
 
 
 		if ( EBADF == i ) {
