@@ -93,6 +93,7 @@ static int text_packet_processor(char *packet, int length, uint64_t microtime_st
 			break;
 		case TRISONIC_MINI_FORMAT:
 			tmp = do_TRISONIC_MINI_FORMAT(packet);
+			packet[0] = 'S';	// emergency fix 
 			break;
 	}
 	if ( 0 == retainedFlag ) {
