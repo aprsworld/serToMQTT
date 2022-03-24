@@ -926,29 +926,39 @@ static void _overRide(char *s ) {
 		}
 	}
 }
+void ts(void) {
+	if ( 0 != outputDebug ) {
+		struct timeval time;
+		gettimeofday(&time, NULL); 
+		fprintf(stderr,"%ld %6ld\n",(long ) time.tv_sec, (long ) time.tv_usec);
+	}
+}
+
 static void _poll(int serialfd ) {
 	static char buffer[6] = { 0x23, 0x41, 0x00, 0x01, };
-	struct timeval time;
-	gettimeofday(&time, NULL); 
-	/* three condition  -1 = before  0 = during and  1= after */
-	int now = time.tv_usec / 1000;
-	int flag;
-	static int already_done;
+	write(serialfd,buffer,4);
+	ts();
+}
 
-	if ( _pollat > now ) {
-		flag = -1;
-	} if ( _pollat < (now + 50 ) ) {
-		flag = 0;
-	} else {
-		flag = 1;
+struct timeval *until_next_poll(struct timeval *tv) {
+	/* this function computes the interval until the next poll is required and stuffs the interval into tv */
+	if ( -1 ==  _pollat ) {
+		return	0;
+	}
+	/* we are now polling */
+	gettimeofday(tv, NULL); 
+	int i = _pollat * 1000;
+	i -= tv->tv_usec;
+	
+	tv->tv_sec = 0;
+	tv->tv_usec = i;
+	if ( 0 > tv->tv_usec ) {
+		tv->tv_usec += 1000000;
 	}
 
-	if ( 0 != flag ) {
-		already_done = 0;
-	} else if ( 0 == already_done ) {
-		already_done = 1;
-		write(serialfd,buffer,4);
-	}
+
+
+	return	tv;
 }
 
 void WorldData_engine(int serialfd,char *special_handling ) {
@@ -975,20 +985,12 @@ void WorldData_engine(int serialfd,char *special_handling ) {
 	/* set an alarm to send a SIGALARM if data not received within alarmSeconds */
 	//alarm(alarmSeconds);
 
-	if ( -1 != _pollat ) {
-		poll_interval.tv_sec = 0;
-		poll_interval.tv_usec = 1000;	/* 1 msec */
-	}
-
 	for ( ; 0 == rc ; ) {
 		/* Block until input arrives on one or more active sockets. */
 		read_fd_set = active_fd_set;
 
-		if ( -1 != _pollat ) {
-			_poll(serialfd);
-		}
-
-		i=select(FD_SETSIZE, &read_fd_set, NULL, NULL, ( -1 == _pollat ) ? NULL: &poll_interval );
+		/* we will set select to expire when the the next poll is required or nver */
+		 i=select(FD_SETSIZE, &read_fd_set, NULL, NULL, ( -1 == _pollat ) ? NULL: until_next_poll(&poll_interval) );
 
 
 		if ( EBADF == i ) {
@@ -1001,7 +1003,9 @@ void WorldData_engine(int serialfd,char *special_handling ) {
 
 		if ( FD_ISSET(serialfd, &read_fd_set) ) {
 			rc = _serial_process(serialfd);
-		} 
+		} else {
+			_poll(serialfd);
+		}
 	}
 
 }
