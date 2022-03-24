@@ -2,12 +2,16 @@ CC=gcc
 CFLAGS=-I./json-c-0.14 -I/usr/include/ -I. -Wunused-function  -Wunused-variable -g
 LDFLAGS=-Ljson-c-build
 
-serToMQTT: serToMQTT.o protocol_text.o protocol_NMEA0183.o setDateTimeFromGPS.o protocol_FL702LT.o protocol_WINDMASTER.o \
+serToMQTT: longisze.h serToMQTT.o protocol_text.o protocol_NMEA0183.o setDateTimeFromGPS.o protocol_FL702LT.o protocol_WINDMASTER.o \
 	protocol_LOADSTAR.o protocol_YOST.o protocol_WorldData.o json_division.o
 	$(CC) serToMQTT.o  protocol_text.o protocol_NMEA0183.o setDateTimeFromGPS.o \
 	protocol_FL702LT.o protocol_WINDMASTER.o protocol_LOADSTAR.o protocol_YOST.o \
 	protocol_WorldData.o json_division.o \
 	-o serToMQTT $(CFLAGS) $(LDFLAGS)  -lm -ljson-c -lmosquitto 
+
+longsize.h: longsize.c
+	$(CC) longsize.c -o longsize
+	echo "#define LONGSIZE `./longsize`" > longsize.h
 
 serToMQTT.o: serToMQTT.c serToMQTT.h
 	$(CC)  -c serToMQTT.c  $(CFLAGS) -I/usr/include/json-c/ 
@@ -16,7 +20,7 @@ json_division.o: json_division.c
 	$(CC)  -c json_division.c  $(CFLAGS) -I/usr/include/json-c/ 
 
 protocol_text.o: protocol_text.c serToMQTT.h \
-	protocol_text_iMet_XQ2.c protocol_text_TriSoncica_Mini.c
+	protocol_text_iMet_XQ2.c protocol_text_TriSoncica_Mini.c protocol_text_TriSoncica_Sphere.c
 	$(CC)  -c protocol_text.c  $(CFLAGS) -I/usr/include/json-c/
 
 protocol_NMEA0183.o: protocol_NMEA0183.c serToMQTT.h \

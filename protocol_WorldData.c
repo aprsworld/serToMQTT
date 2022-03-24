@@ -24,6 +24,7 @@
 #include <string.h>
 #include <json.h>
 #include "serToMQTT.h"
+#include "longsize.h"
 #include <ctype.h>
 #include <stdint.h>
 
@@ -930,7 +931,11 @@ void ts(void) {
 	if ( 0 != outputDebug ) {
 		struct timeval time;
 		gettimeofday(&time, NULL); 
+#if LONGSIZE  == 4
 		fprintf(stderr,"%ld %6ld\n",(long ) time.tv_sec, (long ) time.tv_usec);
+#else
+		fprintf(stderr,"%d %6d\n",time.tv_sec, time.tv_usec);
+#endif
 	}
 }
 
