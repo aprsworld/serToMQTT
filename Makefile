@@ -2,7 +2,7 @@ CC=gcc
 CFLAGS=-I./json-c-0.14 -I/usr/include/ -I. -Wunused-function  -Wunused-variable -g
 LDFLAGS=-Ljson-c-build
 
-serToMQTT: longisze.h serToMQTT.o protocol_text.o protocol_NMEA0183.o setDateTimeFromGPS.o protocol_FL702LT.o protocol_WINDMASTER.o \
+serToMQTT: longsize.h serToMQTT.o protocol_text.o protocol_NMEA0183.o setDateTimeFromGPS.o protocol_FL702LT.o protocol_WINDMASTER.o \
 	protocol_LOADSTAR.o protocol_YOST.o protocol_WorldData.o json_division.o
 	$(CC) serToMQTT.o  protocol_text.o protocol_NMEA0183.o setDateTimeFromGPS.o \
 	protocol_FL702LT.o protocol_WINDMASTER.o protocol_LOADSTAR.o protocol_YOST.o \
@@ -39,7 +39,7 @@ protocol_LOADSTAR.o: protocol_LOADSTAR.c serToMQTT.h  protocol_LOADSTAR.formatte
 protocol_YOST.o: protocol_YOST.c serToMQTT.h  
 	$(CC)  -c protocol_YOST.c  $(CFLAGS) -I/usr/include/json-c/
 
-protocol_WorldData.o: protocol_WorldData.c serToMQTT.h  protocol_WorldData.formatter.c
+protocol_WorldData.o: protocol_WorldData.c serToMQTT.h  protocol_WorldData.formatter.c longsize.h
 	$(CC)  -c protocol_WorldData.c  $(CFLAGS) $(LDFLAGS) -I/usr/include/json-c/
 
 setDateTimeFromGPS.o: setDateTimeFromGPS.c 
