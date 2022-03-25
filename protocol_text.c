@@ -59,10 +59,12 @@ enum input_formats {
 	NO_FORMAT,
 	iMet_XQ2_FORMAT,
 	TRISONIC_MINI_FORMAT,
+	TRISONIC_SPHERE_FORMAT,
 };
 
 #include "protocol_text_iMet_XQ2.c"
 #include "protocol_text_TriSoncica_Mini.c"
+#include "protocol_text_TriSoncica_Sphere.c"
 
 static enum input_formats this_format = NO_FORMAT;
 
@@ -93,7 +95,10 @@ static int text_packet_processor(char *packet, int length, uint64_t microtime_st
 			break;
 		case TRISONIC_MINI_FORMAT:
 			tmp = do_TRISONIC_MINI_FORMAT(packet);
-			packet[0] = 'S';	// emergency fix 
+			break;
+		case TRISONIC_SPHERE_FORMAT:
+			packet[0] = 'S';
+			tmp = do_TRISONIC_SPHERE_FORMAT(packet);
 			break;
 	}
 	if ( 0 == retainedFlag ) {
@@ -111,6 +116,11 @@ static int text_packet_processor(char *packet, int length, uint64_t microtime_st
 		case TRISONIC_MINI_FORMAT:
 			if ( 0 != tmp ) {
 				json_object_object_add(jobj,"Trisonic_Mini_FORMAT",tmp);
+			}
+			break;
+		case TRISONIC_SPHERE_FORMAT:
+			if ( 0 != tmp ) {
+				json_object_object_add(jobj,"Trisonic_Sphere_FORMAT",tmp);
 			}
 			break;
 	}
@@ -236,6 +246,9 @@ static void _do_format(char *s ) {
 	}
 	if ( 0 == strcmp(s,"TRI" )) {
 		this_format = TRISONIC_MINI_FORMAT;
+	}
+	if ( 0 == strcmp(s,"TRISPHERE" )) {
+		this_format = TRISONIC_SPHERE_FORMAT;
 	}
 
 	if ( NO_FORMAT == this_format ) {
